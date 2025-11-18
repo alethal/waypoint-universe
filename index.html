@@ -24,12 +24,12 @@
             padding: 20px;
         }
 
-        .container { max-width: 1200px; margin: 0 auto; }
+        .container { max-width: 1600px; margin: 0 auto; }
 
         .header {
             text-align: center;
             color: white;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
 
         .header h1 {
@@ -40,136 +40,343 @@
 
         .header p {
             font-size: 1.2em;
-            margin: 10px 0 0 0;
+            margin: 10px 0;
             opacity: 0.9;
         }
 
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 20px;
-            margin-bottom: 20px;
+        .view-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
         }
 
-        .panel {
+        .view-btn {
+            background: white;
+            color: #667eea;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn:hover {
+            background: rgba(255,255,255,0.9);
+            transform: translateY(-2px);
+        }
+
+        .view-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .stats-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat .label {
+            font-size: 0.9em;
+            color: #7b8694;
+            margin-top: 5px;
+        }
+
+        .main-content {
             background: white;
             border-radius: 12px;
             padding: 25px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-height: 500px;
         }
 
-        .panel h2 {
-            margin-bottom: 20px;
-            color: #667eea;
-            font-size: 1.5em;
-        }
-
-        .stat-grid {
+        /* Gallery Grid View */
+        .galleries-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
         }
 
-        .stat-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .stat-box .number {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .stat-box .label {
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
-
-        .search-box {
-            width: 100%;
-            padding: 15px;
+        .gallery-card {
             border: 2px solid #e3e6ea;
-            border-radius: 8px;
-            font-size: 1em;
-            margin-bottom: 20px;
-        }
-
-        .search-box:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .waypoint-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        .waypoint-card {
-            background: #f7f7f8;
+            border-radius: 12px;
             padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            transition: all 0.3s;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .waypoint-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        .gallery-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            transform: translateY(-4px);
         }
 
-        .waypoint-card .title {
-            font-weight: bold;
-            margin-bottom: 8px;
+        .gallery-card.selected {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .gallery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .gallery-title {
+            font-size: 1.2em;
+            font-weight: 600;
             color: #2b323b;
         }
 
-        .waypoint-card .gallery {
+        .gallery-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
             font-size: 0.85em;
-            color: #7b8694;
-            margin-bottom: 8px;
+            font-weight: 600;
         }
 
-        .waypoint-card .tags {
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .photo-thumb {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f0f0f0;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .photo-thumb:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .photo-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-thumb.has-waypoints::after {
+            content: '📍';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .photo-thumb.similar {
+            box-shadow: 0 0 0 3px #ff0066;
+        }
+
+        .gallery-tags {
             display: flex;
             flex-wrap: wrap;
             gap: 5px;
+            margin-top: 10px;
         }
 
         .tag {
-            background: #667eea;
-            color: white;
-            padding: 3px 8px;
+            background: #e3e6ea;
+            color: #404854;
+            padding: 4px 8px;
             border-radius: 4px;
             font-size: 0.75em;
+            font-weight: 500;
+        }
+
+        .tag.common {
+            background: #ff0066;
+            color: white;
+        }
+
+        /* Similarity View */
+        .similarity-view {
+            display: none;
+        }
+
+        .similarity-view.active {
+            display: block;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .similarity-section {
+            margin-bottom: 30px;
+        }
+
+        .similarity-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .similarity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .similarity-card {
+            border: 2px solid #e3e6ea;
+            border-radius: 8px;
+            padding: 12px;
+            background: white;
+        }
+
+        .similarity-card.highlighted {
+            border-color: #ff0066;
+            background: #fff5f8;
+        }
+
+        .similarity-photo {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            background: #f0f0f0;
+        }
+
+        .similarity-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .similarity-info {
+            font-size: 0.9em;
+        }
+
+        .similarity-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #2b323b;
+        }
+
+        .similarity-gallery {
+            color: #7b8694;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+        }
+
+        .similarity-score {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .connection-line {
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+            padding: 20px;
+            font-size: 1.1em;
+        }
+
+        /* Photo Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            padding: 30px;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-photo {
+            max-width: 500px;
+            margin: 0 auto 20px;
+        }
+
+        .modal-photo img {
+            width: 100%;
+            border-radius: 8px;
         }
 
         .status-message {
             text-align: center;
-            padding: 20px;
+            padding: 40px;
             color: #7b8694;
             font-style: italic;
-        }
-
-        .iframe-info {
-            background: rgba(255,255,255,0.1);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-        }
-
-        .iframe-info strong {
-            display: block;
-            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -177,233 +384,516 @@
     <div class="container">
         <div class="header">
             <h1>🌌 Waypoint Universe</h1>
-            <p>Connecting waypoints across the cosmos</p>
-            <div class="iframe-info">
-                <strong>🌐 iframe Collection Point</strong>
-                Ready to receive waypoint data from galleries across the web via postMessage
+            <p>Discover connections across your galleries</p>
+
+            <div class="view-toggle">
+                <button class="view-btn active" onclick="switchView('galleries')">📚 All Galleries</button>
+                <button class="view-btn" onclick="switchView('similarities')">🔗 Find Similarities</button>
             </div>
         </div>
 
-        <div class="main-grid">
-            <!-- Stats Panel -->
-            <div class="panel">
-                <h2>📊 Universe Stats</h2>
-                <div class="stat-grid">
-                    <div class="stat-box">
-                        <div class="number" id="totalWaypoints">0</div>
-                        <div class="label">Waypoints</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="totalGalleries">0</div>
-                        <div class="label">Galleries</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="totalConnections">0</div>
-                        <div class="label">Connections</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="number" id="totalTerms">0</div>
-                        <div class="label">Unique Terms</div>
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="number" id="totalGalleries">0</div>
+                <div class="label">Galleries</div>
+            </div>
+            <div class="stat">
+                <div class="number" id="totalPhotos">0</div>
+                <div class="label">Photos</div>
+            </div>
+            <div class="stat">
+                <div class="number" id="totalWaypoints">0</div>
+                <div class="label">Waypoints</div>
+            </div>
+            <div class="stat">
+                <div class="number" id="totalConnections">0</div>
+                <div class="label">Connections</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Galleries View -->
+            <div id="galleriesView" class="galleries-view active">
+                <div id="galleriesGrid" class="galleries-grid">
+                    <div class="status-message">
+                        Waiting for galleries to connect...<br>
+                        Open a standalone gallery and click "Share to Universe"
                     </div>
                 </div>
             </div>
 
-            <!-- Search & Results Panel -->
-            <div class="panel">
-                <h2>🔍 Search Waypoints</h2>
-                <input type="text"
-                       class="search-box"
-                       id="searchBox"
-                       placeholder="Search waypoints by title, terms, or gallery...">
-
-                <div id="waypointResults" class="waypoint-grid">
-                    <div class="status-message">
-                        Waiting for waypoint data from galleries...
-                    </div>
+            <!-- Similarity View -->
+            <div id="similarityView" class="similarity-view">
+                <div class="similarity-section">
+                    <h3>🔍 Select two galleries to compare</h3>
+                    <p style="color: #7b8694; margin-bottom: 20px;">Click on gallery cards above to select them for comparison</p>
+                    <div id="comparisonContainer"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Photo Detail Modal -->
+    <div id="photoModal" class="modal">
+        <button class="modal-close" onclick="closeModal()">×</button>
+        <div class="modal-content" id="modalContent"></div>
+    </div>
+
     <script>
-        // 🌌 WAYPOINT UNIVERSE - Client-Side Static Version
-        // Uses localStorage for persistence, postMessage for iframe communication
-
+        // 🌌 WAYPOINT UNIVERSE - Visual Gallery Explorer
         const STORAGE_KEY = 'waypoint_universe_data';
+        let universe = { galleries: {} };
+        let selectedGalleries = [];
+        let currentView = 'galleries';
 
-        // Load universe data from localStorage
+        // Load universe data
         function loadUniverse() {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
                 return JSON.parse(stored);
             }
-            return {
-                waypoints: [],
-                metadata: {
-                    total_waypoints: 0,
-                    total_galleries: 0,
-                    last_updated: new Date().toISOString()
-                }
-            };
+            return { galleries: {} };
         }
 
-        // Save universe data to localStorage
-        function saveUniverse(universe) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(universe));
+        // Save universe data
+        function saveUniverse(data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         }
 
-        let universe = loadUniverse();
-
-        // Calculate stats
-        function updateStats() {
-            const galleries = new Set(universe.waypoints.map(wp => wp.gallery_id));
-            const allTerms = new Set();
-            universe.waypoints.forEach(wp => {
-                if (wp.infoTerms) {
-                    wp.infoTerms.forEach(term => allTerms.add(term));
-                }
-            });
-
-            // Count connections (waypoints with overlapping terms)
-            let connections = 0;
-            for (let i = 0; i < universe.waypoints.length; i++) {
-                for (let j = i + 1; j < universe.waypoints.length; j++) {
-                    const termsA = universe.waypoints[i].infoTerms || [];
-                    const termsB = universe.waypoints[j].infoTerms || [];
-                    const shared = termsA.filter(t => termsB.includes(t)).length;
-                    if (shared > 0) connections++;
-                }
-            }
-
-            document.getElementById('totalWaypoints').textContent = universe.waypoints.length;
-            document.getElementById('totalGalleries').textContent = galleries.size;
-            document.getElementById('totalConnections').textContent = connections;
-            document.getElementById('totalTerms').textContent = allTerms.size;
-        }
-
-        // Display waypoints
-        function displayWaypoints(waypoints = universe.waypoints, query = '') {
-            const container = document.getElementById('waypointResults');
-
-            if (waypoints.length === 0) {
-                container.innerHTML = '<div class="status-message">No waypoints found. Galleries will auto-share when they load.</div>';
-                return;
-            }
-
-            container.innerHTML = waypoints.map(wp => `
-                <div class="waypoint-card">
-                    <div class="title">${wp.title || 'Untitled Waypoint'}</div>
-                    <div class="gallery">📁 ${wp.gallery_id || 'Unknown Gallery'}</div>
-                    <div class="tags">
-                        ${(wp.infoTerms || []).map(term =>
-                            `<span class="tag">${term}</span>`
-                        ).join('')}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Search functionality
-        document.getElementById('searchBox').addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-
-            if (!query) {
-                displayWaypoints();
-                return;
-            }
-
-            const filtered = universe.waypoints.filter(wp => {
-                const titleMatch = (wp.title || '').toLowerCase().includes(query);
-                const galleryMatch = (wp.gallery_id || '').toLowerCase().includes(query);
-                const termsMatch = (wp.infoTerms || []).some(term =>
-                    term.toLowerCase().includes(query)
-                );
-                return titleMatch || galleryMatch || termsMatch;
-            });
-
-            displayWaypoints(filtered, query);
-        });
-
-        // 🌉 IFRAME postMessage Listener
-        window.addEventListener('message', (event) => {
-            // Security: In production, check event.origin
-            // if (event.origin !== 'https://trusted-site.com') return;
-
-            const data = event.data;
-
-            if (data.type === 'share' && data.galleryData) {
-                console.log('🌌 Received waypoint data from gallery:', data.projectId);
-
-                // Extract waypoints from gallery
-                const photos = data.galleryData.photos || [];
-                const galleryId = data.projectId || data.galleryData.metadata?.gallery_id || 'unknown';
-
-                photos.forEach(photo => {
+        // Calculate all unique infoTerms across galleries
+        function getAllTerms() {
+            const terms = new Set();
+            Object.values(universe.galleries).forEach(gallery => {
+                gallery.photos.forEach(photo => {
                     if (photo['sub-points']) {
-                        photo['sub-points'].forEach(waypoint => {
-                            // Add or update waypoint
-                            const existingIndex = universe.waypoints.findIndex(
-                                wp => wp.id === waypoint.id && wp.gallery_id === galleryId
-                            );
+                        photo['sub-points'].forEach(wp => {
+                            if (wp.infoTerms) {
+                                wp.infoTerms.forEach(term => terms.add(term));
+                            }
+                        });
+                    }
+                });
+            });
+            return terms;
+        }
 
-                            const enrichedWaypoint = {
-                                ...waypoint,
-                                gallery_id: galleryId,
-                                photo_title: photo.title || 'Untitled Photo',
-                                received_at: new Date().toISOString()
-                            };
+        // Find common terms between galleries
+        function findCommonTerms(galleryIds) {
+            if (galleryIds.length < 2) return [];
 
-                            if (existingIndex >= 0) {
-                                universe.waypoints[existingIndex] = enrichedWaypoint;
-                            } else {
-                                universe.waypoints.push(enrichedWaypoint);
+            const termSets = galleryIds.map(id => {
+                const terms = new Set();
+                const gallery = universe.galleries[id];
+                if (!gallery) return terms;
+
+                gallery.photos.forEach(photo => {
+                    if (photo['sub-points']) {
+                        photo['sub-points'].forEach(wp => {
+                            if (wp.infoTerms) {
+                                wp.infoTerms.forEach(term => terms.add(term));
+                            }
+                        });
+                    }
+                });
+                return terms;
+            });
+
+            // Find intersection
+            let common = new Set(termSets[0]);
+            for (let i = 1; i < termSets.length; i++) {
+                common = new Set([...common].filter(x => termSets[i].has(x)));
+            }
+
+            return [...common];
+        }
+
+        // Calculate similarity score between two photos
+        function calculateSimilarity(photo1, photo2) {
+            const terms1 = new Set();
+            const terms2 = new Set();
+
+            if (photo1['sub-points']) {
+                photo1['sub-points'].forEach(wp => {
+                    if (wp.infoTerms) wp.infoTerms.forEach(t => terms1.add(t));
+                });
+            }
+
+            if (photo2['sub-points']) {
+                photo2['sub-points'].forEach(wp => {
+                    if (wp.infoTerms) wp.infoTerms.forEach(t => terms2.add(t));
+                });
+            }
+
+            const intersection = new Set([...terms1].filter(x => terms2.has(x)));
+            const union = new Set([...terms1, ...terms2]);
+
+            if (union.size === 0) return 0;
+            return (intersection.size / union.size * 100).toFixed(0);
+        }
+
+        // Update statistics
+        function updateStats() {
+            const galleryCount = Object.keys(universe.galleries).length;
+            let photoCount = 0;
+            let waypointCount = 0;
+            let connectionCount = 0;
+
+            Object.values(universe.galleries).forEach(gallery => {
+                photoCount += gallery.photos.length;
+                gallery.photos.forEach(photo => {
+                    if (photo['sub-points']) {
+                        waypointCount += photo['sub-points'].length;
+                    }
+                });
+            });
+
+            // Calculate connections (photos with shared terms across galleries)
+            const allPhotos = [];
+            Object.entries(universe.galleries).forEach(([galleryId, gallery]) => {
+                gallery.photos.forEach(photo => {
+                    allPhotos.push({ ...photo, galleryId });
+                });
+            });
+
+            for (let i = 0; i < allPhotos.length; i++) {
+                for (let j = i + 1; j < allPhotos.length; j++) {
+                    if (allPhotos[i].galleryId !== allPhotos[j].galleryId) {
+                        const similarity = calculateSimilarity(allPhotos[i], allPhotos[j]);
+                        if (similarity > 0) connectionCount++;
+                    }
+                }
+            }
+
+            document.getElementById('totalGalleries').textContent = galleryCount;
+            document.getElementById('totalPhotos').textContent = photoCount;
+            document.getElementById('totalWaypoints').textContent = waypointCount;
+            document.getElementById('totalConnections').textContent = connectionCount;
+        }
+
+        // Display galleries grid
+        function displayGalleries() {
+            const container = document.getElementById('galleriesGrid');
+            const galleries = Object.entries(universe.galleries);
+
+            if (galleries.length === 0) {
+                container.innerHTML = `
+                    <div class="status-message">
+                        Waiting for galleries to connect...<br>
+                        Open a standalone gallery and click "Share to Universe"
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = galleries.map(([id, gallery]) => {
+                const photoCount = gallery.photos.length;
+                const waypointCount = gallery.photos.reduce((sum, p) =>
+                    sum + (p['sub-points']?.length || 0), 0);
+
+                const allTerms = new Set();
+                gallery.photos.forEach(photo => {
+                    if (photo['sub-points']) {
+                        photo['sub-points'].forEach(wp => {
+                            if (wp.infoTerms) {
+                                wp.infoTerms.forEach(t => allTerms.add(t));
                             }
                         });
                     }
                 });
 
-                // Save and update UI
+                const topTerms = [...allTerms].slice(0, 5);
+                const isSelected = selectedGalleries.includes(id);
+
+                return `
+                    <div class="gallery-card ${isSelected ? 'selected' : ''}"
+                         onclick="toggleGallerySelection('${id}')">
+                        <div class="gallery-header">
+                            <div class="gallery-title">${gallery.name}</div>
+                            <div class="gallery-badge">${photoCount} photos</div>
+                        </div>
+
+                        <div class="photo-grid">
+                            ${gallery.photos.slice(0, 9).map(photo => `
+                                <div class="photo-thumb ${photo['sub-points']?.length ? 'has-waypoints' : ''}"
+                                     onclick="event.stopPropagation(); showPhotoDetail('${id}', '${photo.filename}')">
+                                    ${photo.cloudUrl ?
+                                        `<img src="${photo.cloudUrl}" alt="${photo.title || 'Photo'}">` :
+                                        `<div style="background: linear-gradient(135deg, ${photo.color || '#ccc'} 0%, ${photo.color || '#999'} 100%); width: 100%; height: 100%;"></div>`
+                                    }
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="gallery-tags">
+                            ${topTerms.map(term => `<span class="tag">${term}</span>`).join('')}
+                            ${topTerms.length < allTerms.size ?
+                                `<span class="tag">+${allTerms.size - topTerms.length} more</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle gallery selection for comparison
+        function toggleGallerySelection(galleryId) {
+            const index = selectedGalleries.indexOf(galleryId);
+
+            if (index >= 0) {
+                selectedGalleries.splice(index, 1);
+            } else {
+                if (selectedGalleries.length >= 2) {
+                    selectedGalleries.shift(); // Remove oldest selection
+                }
+                selectedGalleries.push(galleryId);
+            }
+
+            displayGalleries();
+            if (currentView === 'similarities') {
+                displaySimilarities();
+            }
+        }
+
+        // Display similarity comparison
+        function displaySimilarities() {
+            const container = document.getElementById('comparisonContainer');
+
+            if (selectedGalleries.length < 2) {
+                container.innerHTML = `
+                    <div class="status-message">
+                        Please select 2 galleries from the view above to compare
+                    </div>
+                `;
+                return;
+            }
+
+            const gallery1 = universe.galleries[selectedGalleries[0]];
+            const gallery2 = universe.galleries[selectedGalleries[1]];
+            const commonTerms = findCommonTerms(selectedGalleries);
+
+            // Find photos with similar themes
+            const similarities = [];
+            gallery1.photos.forEach(photo1 => {
+                gallery2.photos.forEach(photo2 => {
+                    const score = calculateSimilarity(photo1, photo2);
+                    if (score > 0) {
+                        similarities.push({
+                            photo1,
+                            photo2,
+                            score: parseInt(score),
+                            gallery1: selectedGalleries[0],
+                            gallery2: selectedGalleries[1]
+                        });
+                    }
+                });
+            });
+
+            similarities.sort((a, b) => b.score - a.score);
+
+            container.innerHTML = `
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #667eea;">
+                        🔗 Comparing: ${gallery1.name} ↔ ${gallery2.name}
+                    </h3>
+                    <p style="color: #7b8694; margin: 10px 0;">
+                        Found ${similarities.length} photo connections across ${commonTerms.length} shared themes
+                    </p>
+                    ${commonTerms.length > 0 ? `
+                        <div style="margin-top: 15px;">
+                            <strong>Common themes:</strong>
+                            <div class="gallery-tags" style="margin-top: 10px;">
+                                ${commonTerms.map(term => `<span class="tag common">${term}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${similarities.length > 0 ? `
+                    <div class="similarity-grid">
+                        ${similarities.slice(0, 20).map(sim => `
+                            <div class="similarity-card highlighted">
+                                <div class="similarity-photo">
+                                    ${sim.photo1.cloudUrl ?
+                                        `<img src="${sim.photo1.cloudUrl}" alt="${sim.photo1.title}">` :
+                                        `<div style="background: ${sim.photo1.color || '#ccc'}; width: 100%; height: 100%;"></div>`
+                                    }
+                                </div>
+                                <div class="similarity-info">
+                                    <div class="similarity-title">${sim.photo1.title || 'Untitled'}</div>
+                                    <div class="similarity-gallery">📁 ${gallery1.name}</div>
+                                    <div style="text-align: center; margin: 10px 0; color: #667eea; font-weight: 600;">↕</div>
+                                </div>
+                                <div class="similarity-photo">
+                                    ${sim.photo2.cloudUrl ?
+                                        `<img src="${sim.photo2.cloudUrl}" alt="${sim.photo2.title}">` :
+                                        `<div style="background: ${sim.photo2.color || '#ccc'}; width: 100%; height: 100%;"></div>`
+                                    }
+                                </div>
+                                <div class="similarity-info">
+                                    <div class="similarity-title">${sim.photo2.title || 'Untitled'}</div>
+                                    <div class="similarity-gallery">📁 ${gallery2.name}</div>
+                                    <span class="similarity-score">${sim.score}% match</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="status-message">
+                        No direct photo connections found between these galleries.<br>
+                        Try selecting different galleries.
+                    </div>
+                `}
+            `;
+        }
+
+        // Show photo detail modal
+        function showPhotoDetail(galleryId, filename) {
+            const gallery = universe.galleries[galleryId];
+            const photo = gallery.photos.find(p => p.filename === filename);
+            if (!photo) return;
+
+            const modal = document.getElementById('photoModal');
+            const content = document.getElementById('modalContent');
+
+            const waypoints = photo['sub-points'] || [];
+            const allTerms = new Set();
+            waypoints.forEach(wp => {
+                if (wp.infoTerms) wp.infoTerms.forEach(t => allTerms.add(t));
+            });
+
+            content.innerHTML = `
+                <h2 style="color: #667eea; margin-bottom: 20px;">${photo.title || 'Untitled Photo'}</h2>
+
+                <div class="modal-photo">
+                    ${photo.cloudUrl ?
+                        `<img src="${photo.cloudUrl}" alt="${photo.title}">` :
+                        `<div style="background: ${photo.color || '#ccc'}; width: 100%; height: 300px; border-radius: 8px;"></div>`
+                    }
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <strong>Gallery:</strong> ${gallery.name}<br>
+                    <strong>Location:</strong> ${photo.location || 'Unknown'}<br>
+                    ${photo.day ? `<strong>Day:</strong> ${photo.day}<br>` : ''}
+                    ${photo.notes ? `<strong>Notes:</strong> ${photo.notes}<br>` : ''}
+                </div>
+
+                ${waypoints.length > 0 ? `
+                    <h3 style="color: #667eea; margin: 20px 0 10px;">📍 Waypoints (${waypoints.length})</h3>
+                    ${waypoints.map(wp => `
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                            <div style="font-weight: 600; margin-bottom: 5px;">
+                                ${wp.emoji || '📍'} ${wp.title || 'Untitled Waypoint'}
+                            </div>
+                            ${wp.perspectiveDesc ? `<div style="color: #7b8694; margin-bottom: 8px;">${wp.perspectiveDesc}</div>` : ''}
+                            ${wp.infoTerms?.length ? `
+                                <div class="gallery-tags">
+                                    ${wp.infoTerms.map(term => `<span class="tag">${term}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                ` : '<p style="color: #7b8694;">No waypoints for this photo</p>'}
+
+                ${allTerms.size > 0 ? `
+                    <h3 style="color: #667eea; margin: 20px 0 10px;">🏷️ All Themes</h3>
+                    <div class="gallery-tags">
+                        ${[...allTerms].map(term => `<span class="tag">${term}</span>`).join('')}
+                    </div>
+                ` : ''}
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('photoModal').classList.remove('active');
+        }
+
+        // Switch between views
+        function switchView(view) {
+            currentView = view;
+
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (view === 'galleries') {
+                document.getElementById('galleriesView').classList.add('active');
+                document.getElementById('similarityView').classList.remove('active');
+                displayGalleries();
+            } else {
+                document.getElementById('galleriesView').classList.remove('active');
+                document.getElementById('similarityView').classList.add('active');
+                displaySimilarities();
+            }
+        }
+
+        // Handle incoming gallery data via postMessage
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+
+            if (data.type === 'share' && data.galleryData) {
+                console.log('🌌 Received gallery data:', data.projectId);
+
+                const galleryId = data.projectId || 'unknown-' + Date.now();
+
+                // Store complete gallery with photos
+                universe.galleries[galleryId] = {
+                    name: data.projectId,
+                    photos: data.galleryData.photos || [],
+                    metadata: data.galleryData.metadata || {},
+                    received_at: new Date().toISOString()
+                };
+
                 saveUniverse(universe);
                 updateStats();
-                displayWaypoints();
+                displayGalleries();
 
-                console.log(`✅ Universe now has ${universe.waypoints.length} waypoints from ${new Set(universe.waypoints.map(wp => wp.gallery_id)).size} galleries`);
+                // Count waypoints
+                let waypointCount = 0;
+                universe.galleries[galleryId].photos.forEach(photo => {
+                    if (photo['sub-points']) {
+                        waypointCount += photo['sub-points'].length;
+                    }
+                });
 
-                // Send acknowledgment back to parent
+                console.log(`✅ Gallery "${galleryId}" added with ${universe.galleries[galleryId].photos.length} photos and ${waypointCount} waypoints`);
+
+                // Send acknowledgment
                 if (event.source) {
                     event.source.postMessage({
                         type: 'universe-ack',
-                        waypointsReceived: universe.waypoints.length
+                        waypointsReceived: waypointCount
                     }, event.origin);
                 }
             }
 
             // Handle search requests
             if (data.type === 'request') {
-                console.log('🔍 Search request from parent window');
+                console.log('🔍 Data request from parent');
                 if (event.source) {
                     event.source.postMessage({
-                        type: 'waypoints-data',
-                        waypoints: universe.waypoints
+                        type: 'universe-data',
+                        galleries: universe.galleries
                     }, event.origin);
                 }
             }
         });
 
         // Initialize
+        universe = loadUniverse();
         updateStats();
-        displayWaypoints();
+        displayGalleries();
 
-        // Announce ready state to parent window (if in iframe)
+        // Announce ready state
         if (window.parent !== window) {
             window.parent.postMessage({
                 type: 'universe-ready',
-                waypointsCount: universe.waypoints.length
+                galleryCount: Object.keys(universe.galleries).length
             }, '*');
         }
 
-        console.log('🌌 Waypoint Universe loaded and listening for postMessage events');
-        console.log(`📊 Current stats: ${universe.waypoints.length} waypoints from ${new Set(universe.waypoints.map(wp => wp.gallery_id)).size} galleries`);
+        console.log('🌌 Waypoint Universe loaded');
+        console.log(`📊 ${Object.keys(universe.galleries).length} galleries in universe`);
     </script>
 </body>
 </html>
