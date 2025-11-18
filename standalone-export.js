@@ -119,8 +119,10 @@ async function getGalleryUtilsCode() {
 
 function getBasicGalleryUtils() {
     return `
-// GALLERY UTILS - Basic version
+// GALLERY UTILS - Basic version with Universe integration
 const GalleryUtils = {
+    universeWindow: null,
+
     saveGalleryData() {
         const blob = new Blob([JSON.stringify(galleryData, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
@@ -145,10 +147,122 @@ const GalleryUtils = {
         setTimeout(() => div.remove(), 4000);
     },
 
+    openWaypointUniverse() {
+        // Try to open the Waypoint Universe in a popup
+        const universeUrl = prompt(
+            'Enter the URL of your Waypoint Universe:\\n(e.g., https://yoursite.com/waypoint-universe/ or file:///path/to/index.html)',
+            'https://alethal.github.io/waypoint-universe/'
+        );
+
+        if (!universeUrl) return;
+
+        // Open in popup window
+        const width = 1000;
+        const height = 800;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+
+        this.universeWindow = window.open(
+            universeUrl,
+            'WaypointUniverse',
+            \`width=\${width},height=\${height},left=\${left},top=\${top},resizable=yes,scrollbars=yes\`
+        );
+
+        if (this.universeWindow) {
+            this.showNotification('Waypoint Universe opened! Click "Share to Universe" when ready.');
+        } else {
+            this.showNotification('Popup blocked. Please allow popups and try again.', 'error');
+        }
+    },
+
+    shareToUniverse() {
+        // Try to find universe window (popup or parent iframe)
+        let targetWindow = this.universeWindow;
+
+        if (!targetWindow || targetWindow.closed) {
+            // If no popup, try to share to parent (if in iframe)
+            if (window.parent !== window) {
+                targetWindow = window.parent;
+            } else {
+                this.showNotification('Please open Waypoint Universe first!', 'error');
+                this.openWaypointUniverse();
+                return;
+            }
+        }
+
+        // Prepare gallery data for sharing
+        const projectId = galleryData.project_name || galleryData.trip?.title || 'Unnamed Gallery';
+
+        // Send waypoint data to universe
+        const message = {
+            type: 'share',
+            projectId: projectId,
+            galleryData: galleryData
+        };
+
+        targetWindow.postMessage(message, '*');
+
+        // Count waypoints being shared
+        let waypointCount = 0;
+        if (galleryData.photos) {
+            galleryData.photos.forEach(photo => {
+                if (photo['sub-points']) {
+                    waypointCount += photo['sub-points'].length;
+                }
+            });
+        }
+
+        this.showNotification(\`Shared \${waypointCount} waypoints to Universe! 🌌\`);
+        console.log('🌌 Shared to Waypoint Universe:', message);
+    },
+
     init() {
         const params = new URLSearchParams(location.search);
         if (params.get('edit')) {
             this.enableEditMode();
+        }
+
+        // Always add universe buttons
+        this.addUniverseButtons();
+
+        // Listen for acknowledgments from universe
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'universe-ack') {
+                console.log('✅ Universe acknowledgment received:', event.data);
+                this.showNotification(\`Universe received waypoints! Total: \${event.data.waypointsReceived}\`);
+            }
+        });
+    },
+
+    addUniverseButtons() {
+        // Add Share to Universe button
+        if (!document.getElementById('share-universe')) {
+            const shareBtn = document.createElement('button');
+            shareBtn.id = 'share-universe';
+            shareBtn.textContent = '🌌 Share to Universe';
+            shareBtn.style.cssText = \`
+                position: fixed; top: 20px; right: 20px; z-index: 1000;
+                padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white; border: none; border-radius: 6px; font-weight: 600;
+                cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            \`;
+            shareBtn.onclick = () => this.shareToUniverse();
+            document.body.appendChild(shareBtn);
+        }
+
+        // Add Open Universe button
+        if (!document.getElementById('open-universe')) {
+            const openBtn = document.createElement('button');
+            openBtn.id = 'open-universe';
+            openBtn.textContent = '🌐 Open Universe';
+            openBtn.style.cssText = \`
+                position: fixed; top: 20px; right: 200px; z-index: 1000;
+                padding: 8px 16px; background: #6c757d; color: white; border: none;
+                border-radius: 6px; font-weight: 600; cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            \`;
+            openBtn.onclick = () => this.openWaypointUniverse();
+            document.body.appendChild(openBtn);
         }
     },
 
@@ -158,7 +272,7 @@ const GalleryUtils = {
             saveBtn.id = 'standalone-save';
             saveBtn.textContent = '💾 Save Changes';
             saveBtn.style.cssText = \`
-                position: fixed; top: 20px; left: 20px; z-index: 1000;
+                position: fixed; top: 70px; right: 20px; z-index: 1000;
                 padding: 8px 16px; background: #28a745; color: white; border: none;
                 border-radius: 6px; font-weight: 600; cursor: pointer;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -329,6 +443,26 @@ This is a complete, self-contained gallery that works offline without any server
 - **Grid**: Full drag-drop reordering, metadata editing, photo management
 - **Mystery**: View-focused with basic editing capabilities
 - **Timeline**: Chronological editing and date management
+
+## Waypoint Universe Integration:
+Share your waypoints to the Waypoint Universe hub to connect with other galleries!
+
+### How to Share Waypoints:
+1. Click **"🌐 Open Universe"** button in the top right
+2. Enter your Waypoint Universe URL (or use the default)
+3. Click **"🌌 Share to Universe"** to send your waypoints
+4. The Universe will acknowledge receipt and display your waypoints
+
+### Features:
+- **Automatic Detection**: If your gallery is in an iframe with the Universe, sharing happens automatically
+- **Popup Mode**: Open Universe in a popup window for side-by-side viewing
+- **Visual Feedback**: Get notifications when waypoints are successfully shared
+- **Two-way Communication**: Universe sends acknowledgment when waypoints are received
+
+### Default Universe URL:
+https://alethal.github.io/waypoint-universe/
+
+You can host your own Waypoint Universe or use the default shared hub!
 
 ## Offline Capability:
 This gallery works completely offline. No internet connection required after download.
