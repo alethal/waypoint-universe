@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waypoint Universe 🌌</title>
+    <style>
+        /* Inlined ACCID Palette */
+        :root {
+            --c1: #ff0066; --c2: #ff6600; --c3: #66ff00; --c4: #00ff66; --c5: #0066ff; --c6: #6600ff;
+            --brand: var(--c2); --accent: var(--c5);
+            --neutral-0: #ffffff; --neutral-100: #eff1f3; --neutral-200: #e3e6ea; --neutral-300: #cfd5db;
+            --neutral-400: #a9b2bc; --neutral-500: #7b8694; --neutral-600: #5a6470; --neutral-700: #404854;
+            --neutral-800: #2b323b; --neutral-900: #151a1f;
+            --success: #18a957; --warning: #ffb020; --danger: #e5484d; --info: #2f7eea;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .panel h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+            font-size: 1.5em;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e3e6ea;
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 20px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .waypoint-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .waypoint-card {
+            background: #f7f7f8;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .waypoint-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .waypoint-card .title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2b323b;
+        }
+
+        .waypoint-card .gallery {
+            font-size: 0.85em;
+            color: #7b8694;
+            margin-bottom: 8px;
+        }
+
+        .waypoint-card .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .tag {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 20px;
+            color: #7b8694;
+            font-style: italic;
+        }
+
+        .iframe-info {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .iframe-info strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌌 Waypoint Universe</h1>
+            <p>Connecting waypoints across the cosmos</p>
+            <div class="iframe-info">
+                <strong>🌐 iframe Collection Point</strong>
+                Ready to receive waypoint data from galleries across the web via postMessage
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Stats Panel -->
+            <div class="panel">
+                <h2>📊 Universe Stats</h2>
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="number" id="totalWaypoints">0</div>
+                        <div class="label">Waypoints</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="totalGalleries">0</div>
+                        <div class="label">Galleries</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="totalConnections">0</div>
+                        <div class="label">Connections</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="number" id="totalTerms">0</div>
+                        <div class="label">Unique Terms</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search & Results Panel -->
+            <div class="panel">
+                <h2>🔍 Search Waypoints</h2>
+                <input type="text"
+                       class="search-box"
+                       id="searchBox"
+                       placeholder="Search waypoints by title, terms, or gallery...">
+
+                <div id="waypointResults" class="waypoint-grid">
+                    <div class="status-message">
+                        Waiting for waypoint data from galleries...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🌌 WAYPOINT UNIVERSE - Client-Side Static Version
+        // Uses localStorage for persistence, postMessage for iframe communication
+
+        const STORAGE_KEY = 'waypoint_universe_data';
+
+        // Load universe data from localStorage
+        function loadUniverse() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                return JSON.parse(stored);
+            }
+            return {
+                waypoints: [],
+                metadata: {
+                    total_waypoints: 0,
+                    total_galleries: 0,
+                    last_updated: new Date().toISOString()
+                }
+            };
+        }
+
+        // Save universe data to localStorage
+        function saveUniverse(universe) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(universe));
+        }
+
+        let universe = loadUniverse();
+
+        // Calculate stats
+        function updateStats() {
+            const galleries = new Set(universe.waypoints.map(wp => wp.gallery_id));
+            const allTerms = new Set();
+            universe.waypoints.forEach(wp => {
+                if (wp.infoTerms) {
+                    wp.infoTerms.forEach(term => allTerms.add(term));
+                }
+            });
+
+            // Count connections (waypoints with overlapping terms)
+            let connections = 0;
+            for (let i = 0; i < universe.waypoints.length; i++) {
+                for (let j = i + 1; j < universe.waypoints.length; j++) {
+                    const termsA = universe.waypoints[i].infoTerms || [];
+                    const termsB = universe.waypoints[j].infoTerms || [];
+                    const shared = termsA.filter(t => termsB.includes(t)).length;
+                    if (shared > 0) connections++;
+                }
+            }
+
+            document.getElementById('totalWaypoints').textContent = universe.waypoints.length;
+            document.getElementById('totalGalleries').textContent = galleries.size;
+            document.getElementById('totalConnections').textContent = connections;
+            document.getElementById('totalTerms').textContent = allTerms.size;
+        }
+
+        // Display waypoints
+        function displayWaypoints(waypoints = universe.waypoints, query = '') {
+            const container = document.getElementById('waypointResults');
+
+            if (waypoints.length === 0) {
+                container.innerHTML = '<div class="status-message">No waypoints found. Galleries will auto-share when they load.</div>';
+                return;
+            }
+
+            container.innerHTML = waypoints.map(wp => `
+                <div class="waypoint-card">
+                    <div class="title">${wp.title || 'Untitled Waypoint'}</div>
+                    <div class="gallery">📁 ${wp.gallery_id || 'Unknown Gallery'}</div>
+                    <div class="tags">
+                        ${(wp.infoTerms || []).map(term =>
+                            `<span class="tag">${term}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Search functionality
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+
+            if (!query) {
+                displayWaypoints();
+                return;
+            }
+
+            const filtered = universe.waypoints.filter(wp => {
+                const titleMatch = (wp.title || '').toLowerCase().includes(query);
+                const galleryMatch = (wp.gallery_id || '').toLowerCase().includes(query);
+                const termsMatch = (wp.infoTerms || []).some(term =>
+                    term.toLowerCase().includes(query)
+                );
+                return titleMatch || galleryMatch || termsMatch;
+            });
+
+            displayWaypoints(filtered, query);
+        });
+
+        // 🌉 IFRAME postMessage Listener
+        window.addEventListener('message', (event) => {
+            // Security: In production, check event.origin
+            // if (event.origin !== 'https://trusted-site.com') return;
+
+            const data = event.data;
+
+            if (data.type === 'share' && data.galleryData) {
+                console.log('🌌 Received waypoint data from gallery:', data.projectId);
+
+                // Extract waypoints from gallery
+                const photos = data.galleryData.photos || [];
+                const galleryId = data.projectId || data.galleryData.metadata?.gallery_id || 'unknown';
+
+                photos.forEach(photo => {
+                    if (photo['sub-points']) {
+                        photo['sub-points'].forEach(waypoint => {
+                            // Add or update waypoint
+                            const existingIndex = universe.waypoints.findIndex(
+                                wp => wp.id === waypoint.id && wp.gallery_id === galleryId
+                            );
+
+                            const enrichedWaypoint = {
+                                ...waypoint,
+                                gallery_id: galleryId,
+                                photo_title: photo.title || 'Untitled Photo',
+                                received_at: new Date().toISOString()
+                            };
+
+                            if (existingIndex >= 0) {
+                                universe.waypoints[existingIndex] = enrichedWaypoint;
+                            } else {
+                                universe.waypoints.push(enrichedWaypoint);
+                            }
+                        });
+                    }
+                });
+
+                // Save and update UI
+                saveUniverse(universe);
+                updateStats();
+                displayWaypoints();
+
+                console.log(`✅ Universe now has ${universe.waypoints.length} waypoints from ${new Set(universe.waypoints.map(wp => wp.gallery_id)).size} galleries`);
+
+                // Send acknowledgment back to parent
+                if (event.source) {
+                    event.source.postMessage({
+                        type: 'universe-ack',
+                        waypointsReceived: universe.waypoints.length
+                    }, event.origin);
+                }
+            }
+
+            // Handle search requests
+            if (data.type === 'request') {
+                console.log('🔍 Search request from parent window');
+                if (event.source) {
+                    event.source.postMessage({
+                        type: 'waypoints-data',
+                        waypoints: universe.waypoints
+                    }, event.origin);
+                }
+            }
+        });
+
+        // Initialize
+        updateStats();
+        displayWaypoints();
+
+        // Announce ready state to parent window (if in iframe)
+        if (window.parent !== window) {
+            window.parent.postMessage({
+                type: 'universe-ready',
+                waypointsCount: universe.waypoints.length
+            }, '*');
+        }
+
+        console.log('🌌 Waypoint Universe loaded and listening for postMessage events');
+        console.log(`📊 Current stats: ${universe.waypoints.length} waypoints from ${new Set(universe.waypoints.map(wp => wp.gallery_id)).size} galleries`);
+    </script>
+</body>
+</html>
