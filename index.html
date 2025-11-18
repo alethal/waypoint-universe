@@ -224,6 +224,57 @@
             color: white;
         }
 
+        /* Perspective badges (from spatial gallery) */
+        .perspective-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        .perspective-badge.dad {
+            background: #4A90E2;
+            color: white;
+        }
+
+        .perspective-badge.sister {
+            background: #F5D547;
+            color: #333;
+        }
+
+        .perspective-badge.mom {
+            background: #50C878;
+            color: white;
+        }
+
+        .perspective-badge.photographer {
+            background: #FF8C42;
+            color: white;
+        }
+
+        .waypoint-indicator {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .waypoint-count {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
         /* Similarity View */
         .similarity-view {
             display: none;
@@ -409,6 +460,10 @@
                 <div class="number" id="totalConnections">0</div>
                 <div class="label">Connections</div>
             </div>
+            <div class="stat" id="perspectivesContainer" style="min-width: 200px;">
+                <div class="label" style="margin-bottom: 8px;">Perspectives</div>
+                <div id="perspectiveBadges" style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;"></div>
+            </div>
         </div>
 
         <div class="main-content">
@@ -537,12 +592,20 @@
             let photoCount = 0;
             let waypointCount = 0;
             let connectionCount = 0;
+            const perspectiveCounts = {};
 
             Object.values(universe.galleries).forEach(gallery => {
                 photoCount += gallery.photos.length;
                 gallery.photos.forEach(photo => {
                     if (photo['sub-points']) {
                         waypointCount += photo['sub-points'].length;
+                        // Count perspectives
+                        photo['sub-points'].forEach(wp => {
+                            if (wp.perspective) {
+                                const p = wp.perspective;
+                                perspectiveCounts[p] = (perspectiveCounts[p] || 0) + 1;
+                            }
+                        });
                     }
                 });
             });
@@ -568,6 +631,19 @@
             document.getElementById('totalPhotos').textContent = photoCount;
             document.getElementById('totalWaypoints').textContent = waypointCount;
             document.getElementById('totalConnections').textContent = connectionCount;
+
+            // Update perspective badges
+            const badgesContainer = document.getElementById('perspectiveBadges');
+            if (Object.keys(perspectiveCounts).length > 0) {
+                badgesContainer.innerHTML = Object.entries(perspectiveCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([perspective, count]) => {
+                        const pClass = perspective.toLowerCase().replace(/\s+/g, '-');
+                        return `<span class="perspective-badge ${pClass}" title="${count} waypoints">${perspective}</span>`;
+                    }).join('');
+            } else {
+                badgesContainer.innerHTML = '<span style="color: #7b8694; font-size: 0.85em;">None yet</span>';
+            }
         }
 
         // Display galleries grid
@@ -613,15 +689,28 @@
                         </div>
 
                         <div class="photo-grid">
-                            ${gallery.photos.slice(0, 9).map(photo => `
-                                <div class="photo-thumb ${photo['sub-points']?.length ? 'has-waypoints' : ''}"
+                            ${gallery.photos.slice(0, 9).map(photo => {
+                                const waypointCount = photo['sub-points']?.length || 0;
+                                const perspectives = new Set();
+                                if (photo['sub-points']) {
+                                    photo['sub-points'].forEach(wp => {
+                                        if (wp.perspective) {
+                                            perspectives.add(wp.perspective.toLowerCase());
+                                        }
+                                    });
+                                }
+
+                                return `
+                                <div class="photo-thumb ${waypointCount ? 'has-waypoints' : ''}"
+                                     style="position: relative;"
                                      onclick="event.stopPropagation(); showPhotoDetail('${id}', '${photo.filename}')">
                                     ${photo.cloudUrl ?
                                         `<img src="${photo.cloudUrl}" alt="${photo.title || 'Photo'}">` :
                                         `<div style="background: linear-gradient(135deg, ${photo.color || '#ccc'} 0%, ${photo.color || '#999'} 100%); width: 100%; height: 100%;"></div>`
                                     }
+                                    ${waypointCount > 0 ? `<div class="waypoint-count">${waypointCount} waypoint${waypointCount > 1 ? 's' : ''}</div>` : ''}
                                 </div>
-                            `).join('')}
+                            `}).join('')}
                         </div>
 
                         <div class="gallery-tags">
@@ -779,19 +868,36 @@
 
                 ${waypoints.length > 0 ? `
                     <h3 style="color: #667eea; margin: 20px 0 10px;">📍 Waypoints (${waypoints.length})</h3>
-                    ${waypoints.map(wp => `
+                    ${waypoints.map(wp => {
+                        const perspectiveClass = wp.perspective ? wp.perspective.toLowerCase().replace(/\s+/g, '-') : '';
+                        return `
                         <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px;">
-                            <div style="font-weight: 600; margin-bottom: 5px;">
-                                ${wp.emoji || '📍'} ${wp.title || 'Untitled Waypoint'}
+                            <div style="font-weight: 600; margin-bottom: 8px;">
+                                ${wp.emoji || '📍'} ${wp.title || wp.name || 'Untitled Waypoint'}
+                                ${wp.perspective ? `<span class="perspective-badge ${perspectiveClass}">${wp.perspective}</span>` : ''}
                             </div>
-                            ${wp.perspectiveDesc ? `<div style="color: #7b8694; margin-bottom: 8px;">${wp.perspectiveDesc}</div>` : ''}
+                            ${wp.perspectiveDesc ? `
+                                <div style="color: #7b8694; margin-bottom: 8px; font-style: italic;">
+                                    "${wp.perspectiveDesc}"
+                                </div>
+                            ` : ''}
+                            ${wp.linkedPhotoId ? `
+                                <div style="color: #667eea; font-size: 0.85em; margin-bottom: 8px;">
+                                    🔗 Links to: ${wp.linkedPhotoId}
+                                </div>
+                            ` : ''}
+                            ${wp.similarity > 0 ? `
+                                <div style="color: #7b8694; font-size: 0.85em; margin-bottom: 8px;">
+                                    Similarity: ${(wp.similarity * 100).toFixed(1)}%
+                                </div>
+                            ` : ''}
                             ${wp.infoTerms?.length ? `
                                 <div class="gallery-tags">
                                     ${wp.infoTerms.map(term => `<span class="tag">${term}</span>`).join('')}
                                 </div>
                             ` : ''}
                         </div>
-                    `).join('')}
+                    `}).join('')}
                 ` : '<p style="color: #7b8694;">No waypoints for this photo</p>'}
 
                 ${allTerms.size > 0 ? `
