@@ -2559,11 +2559,12 @@
 
       async function loadData() {
         try {
-          const res = await fetch('../gallery-data.json', { cache: 'no-store' });
+          const res = await fetch('../accid_dropper.json', { cache: 'no-store' });
           const data = await res.json();
           window.GALLERY_DATA = data; // Store globally for waypoint functions
           return data;
-        } catch {
+        } catch (err) {
+          console.error('❌ Failed to load gallery data:', err);
           window.GALLERY_DATA = { photos: [] };
           return { photos: [] };
         }
