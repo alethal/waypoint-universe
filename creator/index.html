@@ -5014,6 +5014,10 @@
             previewIframe.src = templateUrl;
             previewTitle.textContent = `${tab.textContent} Preview`;
 
+            // Close all settings panels
+            document.querySelectorAll('.settings-panel').forEach(p => p.style.display = 'none');
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+
             // Show preview panel
             previewPanel.style.display = 'block';
 
@@ -5527,6 +5531,13 @@
           // Close all panels
           settingsPanels.forEach(p => p.style.display = 'none');
           settingsTabs.forEach(t => t.classList.remove('active'));
+
+          // Close preview panel if open
+          const previewPanel = document.getElementById('preview-panel');
+          if (previewPanel) {
+            previewPanel.style.display = 'none';
+          }
+          document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
 
           // Open clicked panel
           if (panel) {
