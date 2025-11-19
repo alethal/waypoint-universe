@@ -1679,13 +1679,23 @@
     }
 
     function getPhotoTerms(photo) {
-      if (!photo['sub-points']) return [];
       const terms = [];
-      photo['sub-points'].forEach(wp => {
-        if (wp.infoTerms && Array.isArray(wp.infoTerms)) {
-          terms.push(...wp.infoTerms);
-        }
-      });
+
+      // Add photo-level infoTerms (if they exist)
+      if (photo.infoTerms && Array.isArray(photo.infoTerms)) {
+        terms.push(...photo.infoTerms);
+      }
+
+      // Add waypoint-level infoTerms
+      if (photo['sub-points']) {
+        photo['sub-points'].forEach(wp => {
+          if (wp.infoTerms && Array.isArray(wp.infoTerms)) {
+            terms.push(...wp.infoTerms);
+          }
+        });
+      }
+
+      // Return unique terms only
       return [...new Set(terms)];
     }
 

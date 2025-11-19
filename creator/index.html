@@ -2656,6 +2656,13 @@
               ${renderWaypointAssetForm(photo, 0, photo.filename, 'asset')}
             </div>
 
+            <!-- PHOTO-LEVEL INFO TERMS -->
+            <div class="field-group" style="background: #f0fff4; padding: 12px; border-radius: 8px; border: 2px solid #10b981; margin-bottom: 16px;">
+              <label style="color: #059669; font-weight: bold; font-size: 14px;">🏷️ Photo Tags (Info Terms)</label>
+              <small style="display: block; color: #666; font-size: 11px; margin-bottom: 8px;">Comma-separated terms for spatial gallery (e.g., italy, travel, vacation, 2024)</small>
+              <input class="ef-infoterms" value="${(photo.infoTerms || []).join(', ')}" placeholder="italy, travel, architecture, summer">
+            </div>
+
             <!-- BACK OF PHOTO (admin notes) -->
             <div class="field-group">
               <label>Back of Photo <span style="color: #dc3545; font-size: 12px;">internal - no public notes</span></label>
@@ -3664,6 +3671,20 @@
 
               const fav = c.querySelector('.ef-fav');
               if (fav) photoData.favorite = fav.checked;
+
+              // Read and parse photo-level infoTerms
+              const infoTermsInput = c.querySelector('.ef-infoterms');
+              if (infoTermsInput) {
+                const termsStr = infoTermsInput.value.trim();
+                if (termsStr) {
+                  // Split by comma, trim whitespace, filter out empty strings
+                  photoData.infoTerms = termsStr.split(',')
+                    .map(t => t.trim())
+                    .filter(t => t.length > 0);
+                } else {
+                  photoData.infoTerms = [];
+                }
+              }
 
               // Get photo perspective
               const photoPerspective = c.querySelector('.ef-photo-perspective');
