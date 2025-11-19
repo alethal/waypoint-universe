@@ -63,6 +63,47 @@
       padding-left: 16px;
     }
 
+    /* Layout and Perspectives tabs - same style as preview */
+    .settings-tabs {
+      position: fixed;
+      right: 0;
+      top: 30%;
+      transform: translateY(-50%);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .settings-tab {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      padding: 20px 12px;
+      background: #343a40;
+      color: white;
+      border: none;
+      border-left: 3px solid #667eea;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border-radius: 8px 0 0 8px;
+      letter-spacing: 2px;
+      text-decoration: none;
+      display: block;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .settings-tab:hover {
+      background: #495057;
+      padding-left: 16px;
+    }
+
+    .settings-tab.active {
+      background: #667eea;
+      padding-left: 16px;
+    }
+
     /* Pulsing animation for Save button */
     @keyframes pulse-save {
 
@@ -1542,16 +1583,18 @@
 
     <!-- Perspectives Setup Panel - REMOVED, now in Creator Bridge below -->
 
-    <!-- Layout Bridge Panel -->
-    <div class="creator-bridge collapsed" id="layoutBridge">
-      <div class="bridge-tab-toggle" id="layoutBridgeToggle">📐</div>
+    <!-- Settings Tabs (Layout & Perspectives) -->
+    <div class="settings-tabs">
+      <button class="settings-tab" data-panel="layout">📐 Layout Style</button>
+      <button class="settings-tab" data-panel="perspectives">👁️ Perspectives</button>
+    </div>
 
-      <div class="bridge-content">
-        <button class="bridge-close" id="layoutBridgeClose">×</button>
+    <!-- Layout Panel -->
+    <div id="layout-panel" class="settings-panel" style="display: none; position: fixed; top: 0; right: 0; width: 320px; height: 100vh; background: rgba(0,0,0,0.9); box-shadow: -4px 0 12px rgba(0,0,0,0.3); z-index: 999; overflow-y: auto; padding: 20px;">
+      <button class="panel-close" data-panel="layout" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); border: none; color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 18px;">×</button>
 
-        <!-- Gallery Layout Style -->
-        <div class="bridge-section">
-          <h4>📐 Layout Style</h4>
+      <div class="bridge-section">
+        <h4>📐 Layout Style</h4>
 
           <!-- Preset Buttons -->
           <div class="spread-presets"
@@ -1605,32 +1648,26 @@
             </div>
           </div>
         </div>
-      </div>
     </div>
 
-    <!-- Perspectives Bridge Panel -->
-    <div class="creator-bridge collapsed" id="perspectivesBridge">
-      <div class="bridge-tab-toggle" id="perspectivesBridgeToggle">👁️</div>
+    <!-- Perspectives Panel -->
+    <div id="perspectives-panel" class="settings-panel" style="display: none; position: fixed; top: 0; right: 0; width: 320px; height: 100vh; background: rgba(0,0,0,0.9); box-shadow: -4px 0 12px rgba(0,0,0,0.3); z-index: 999; overflow-y: auto; padding: 20px;">
+      <button class="panel-close" data-panel="perspectives" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); border: none; color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 18px;">×</button>
 
-      <div class="bridge-content">
-        <button class="bridge-close" id="perspectivesBridgeClose">×</button>
-
-        <!-- Perspectives -->
-        <div class="bridge-section">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75em;">
-            <h4 style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 0.3em;"
-              onclick="togglePerspectivesSection()">
-              <span>👁️ Perspectives</span>
-              <span id="perspectivesToggleIcon" style="font-size: 0.7em;">▼</span>
-            </h4>
-            <button class="add-perspective-btn" onclick="addPerspective()"
-              style="padding: 0.4em 0.8em; background: rgba(102, 126, 234, 0.3); border: 1px solid rgba(102, 126, 234, 0.5); color: white; border-radius: 4px; cursor: pointer; font-size: 0.75em; transition: all 0.2s; font-weight: 600;">
-              + ADD
-            </button>
-          </div>
-          <div id="perspectivesContent">
-            <div id="perspectivesList" class="bridge-perspectives-list" style="max-height: 300px; overflow-y: auto;">
-            </div>
+      <div class="bridge-section">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75em;">
+          <h4 style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 0.3em;"
+            onclick="togglePerspectivesSection()">
+            <span>👁️ Perspectives</span>
+            <span id="perspectivesToggleIcon" style="font-size: 0.7em;">▼</span>
+          </h4>
+          <button class="add-perspective-btn" onclick="addPerspective()"
+            style="padding: 0.4em 0.8em; background: rgba(102, 126, 234, 0.3); border: 1px solid rgba(102, 126, 234, 0.5); color: white; border-radius: 4px; cursor: pointer; font-size: 0.75em; transition: all 0.2s; font-weight: 600;">
+            + ADD
+          </button>
+        </div>
+        <div id="perspectivesContent">
+          <div id="perspectivesList" class="bridge-perspectives-list" style="max-height: 300px; overflow-y: auto;">
           </div>
         </div>
       </div>
@@ -5480,55 +5517,39 @@
 
     // Initialize creator bridge toggle
     document.addEventListener('DOMContentLoaded', () => {
-      // Layout Bridge Toggle
-      const layoutBridgeToggle = document.getElementById('layoutBridgeToggle');
-      const layoutBridge = document.getElementById('layoutBridge');
-      const layoutBridgeClose = document.getElementById('layoutBridgeClose');
+      // Settings tabs toggle
+      const settingsTabs = document.querySelectorAll('.settings-tab');
+      const settingsPanels = document.querySelectorAll('.settings-panel');
+      const panelCloseButtons = document.querySelectorAll('.panel-close');
 
-      if (layoutBridgeToggle && layoutBridge) {
-        layoutBridgeToggle.addEventListener('click', (e) => {
-          e.stopPropagation();
-          layoutBridge.classList.toggle('collapsed');
-        });
+      settingsTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const panelName = tab.dataset.panel;
+          const panel = document.getElementById(`${panelName}-panel`);
 
-        if (layoutBridgeClose) {
-          layoutBridgeClose.addEventListener('click', (e) => {
-            e.stopPropagation();
-            layoutBridge.classList.add('collapsed');
-          });
-        }
+          // Close all panels
+          settingsPanels.forEach(p => p.style.display = 'none');
+          settingsTabs.forEach(t => t.classList.remove('active'));
 
-        layoutBridge.addEventListener('click', (e) => {
-          if (layoutBridge.classList.contains('collapsed')) {
-            layoutBridge.classList.remove('collapsed');
+          // Open clicked panel
+          if (panel) {
+            panel.style.display = 'block';
+            tab.classList.add('active');
           }
         });
-      }
+      });
 
-      // Perspectives Bridge Toggle
-      const perspectivesBridgeToggle = document.getElementById('perspectivesBridgeToggle');
-      const perspectivesBridge = document.getElementById('perspectivesBridge');
-      const perspectivesBridgeClose = document.getElementById('perspectivesBridgeClose');
-
-      if (perspectivesBridgeToggle && perspectivesBridge) {
-        perspectivesBridgeToggle.addEventListener('click', (e) => {
-          e.stopPropagation();
-          perspectivesBridge.classList.toggle('collapsed');
-        });
-
-        if (perspectivesBridgeClose) {
-          perspectivesBridgeClose.addEventListener('click', (e) => {
-            e.stopPropagation();
-            perspectivesBridge.classList.add('collapsed');
-          });
-        }
-
-        perspectivesBridge.addEventListener('click', (e) => {
-          if (perspectivesBridge.classList.contains('collapsed')) {
-            perspectivesBridge.classList.remove('collapsed');
+      // Close button handlers
+      panelCloseButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const panelName = btn.dataset.panel;
+          const panel = document.getElementById(`${panelName}-panel`);
+          if (panel) {
+            panel.style.display = 'none';
           }
+          settingsTabs.forEach(t => t.classList.remove('active'));
         });
-      }
+      });
     });
 
     // ============================================================================
