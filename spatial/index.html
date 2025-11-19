@@ -1,0 +1,3103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spatial Gallery - Semantic Clustering</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #fff;
+      color: #000;
+      overflow: hidden;
+    }
+
+    .spatial-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      perspective: 1000px;
+      background: #fff;
+    }
+
+    .gallery-viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .photos-grid {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+    }
+
+    .photo-card {
+      position: absolute;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      transform-origin: center;
+      border-radius: 12px;
+      overflow: visible;
+      /* Allow info overlay to extend beyond card */
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 12px;
+      /* Clip image corners */
+    }
+
+    .photo-card {
+      width: 20%;
+      height: auto;
+      aspect-ratio: 4/3;
+      transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: absolute;
+      cursor: pointer;
+    }
+
+    /* Surrounding photos: subtle scale up on hover (sub-points only) */
+    .photo-card:not(.center):hover {
+      transform: scale(1.08) !important;
+      z-index: 200 !important;
+      filter: none !important;
+      /* Remove blur/dim effects on hover for clarity */
+      opacity: 1 !important;
+      /* Full opacity on hover */
+    }
+
+    .photo-card.center {
+      z-index: 1;
+      transform: translate(-50%, -50%);
+      opacity: 1;
+      left: 50% !important;
+      top: 50% !important;
+      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+    }
+
+    .photo-card.near {
+      z-index: 50;
+      transform: perspective(1200px) rotateX(-5deg) rotateY(-3deg);
+      opacity: 0.95;
+      filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.3));
+    }
+
+    .photo-card.far {
+      z-index: 10;
+      transform: perspective(1200px) rotateX(-8deg) rotateY(-5deg);
+      opacity: 0.8;
+      filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.2));
+    }
+
+    .photo-card.distant {
+      z-index: 5;
+      transform: perspective(1200px) rotateX(-10deg) rotateY(-7deg);
+      opacity: 0.6;
+      filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
+    }
+
+    /* Semantic clustering: highlight similar photos */
+    .photo-card.cluster-highlight {
+      box-shadow: 0 0 30px rgba(255, 102, 0, 0.6), inset 0 0 20px rgba(255, 102, 0, 0.2);
+      border: 2px solid rgba(255, 102, 0, 0.5);
+    }
+
+    /* Connection lines between related photos */
+    svg.connection-lines {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    svg.connection-lines line {
+      stroke: rgba(255, 102, 0, 0.2);
+      stroke-width: 1;
+      transition: all 0.3s ease;
+    }
+
+    svg.connection-lines line.active {
+      stroke: rgba(255, 102, 0, 0.6);
+      stroke-width: 2;
+      filter: drop-shadow(0 0 5px rgba(255, 102, 0, 0.4));
+    }
+
+    /* Waypoint Related Photos - Pop-in carousel */
+    .waypoint-previews {
+      position: absolute;
+      display: none;
+      z-index: 150;
+    }
+
+    .waypoint-previews.active {
+      display: block;
+    }
+
+    .waypoint-preview {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border-radius: 12px;
+      background-size: cover;
+      background-position: center;
+      border: 2px solid rgba(255, 102, 0, 0.4);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      opacity: 0;
+      transform: scale(0);
+      animation: waypointPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .waypoint-preview:nth-child(1) {
+      animation-delay: 0.1s;
+    }
+
+    .waypoint-preview:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .waypoint-preview:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    .waypoint-preview:nth-child(4) {
+      animation-delay: 0.4s;
+    }
+
+    .waypoint-preview:nth-child(5) {
+      animation-delay: 0.5s;
+    }
+
+    .waypoint-preview:nth-child(6) {
+      animation-delay: 0.6s;
+    }
+
+    @keyframes waypointPopIn {
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .waypoint-preview:hover {
+      filter: brightness(1.2) saturate(1.1);
+      border-color: #ff6600;
+      box-shadow: 0 0 20px rgba(255, 102, 0, 0.6);
+      transform: scale(1.1);
+    }
+
+    .photo-info {
+      position: absolute;
+      bottom: -10px;
+      /* Extend slightly below photo for better visibility */
+      left: -5px;
+      right: -5px;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.95));
+      padding: 1.5em;
+      padding-top: 2.5em;
+      color: white;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      border-radius: 0 0 12px 12px;
+      /* Break out of parent's filters - render with full clarity */
+      filter: none !important;
+      backdrop-filter: blur(10px);
+      z-index: 1000;
+      pointer-events: none;
+      /* Allow clicks to pass through to photo */
+    }
+
+    .photo-info * {
+      pointer-events: auto;
+      /* Re-enable pointer events for child elements */
+    }
+
+    .photo-info.hidden {
+      transform: translateY(100%);
+      opacity: 0 !important;
+    }
+
+    .photo-info .info-toggle {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(255, 102, 0, 0.3);
+      border: 1px solid rgba(255, 102, 0, 0.6);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .photo-info .info-toggle:hover {
+      background: rgba(255, 102, 0, 0.8);
+      transform: scale(1.1);
+    }
+
+    /* Show info overlay on hover for ALL photos (not just center) */
+    .photo-card:hover .photo-info:not(.hidden) {
+      opacity: 1;
+    }
+
+    /* Make surrounding photos' info extra visible on hover */
+    .photo-card:not(.center):hover .photo-info:not(.hidden) {
+      opacity: 1;
+      transform: translateY(-50%);
+      /* Maintain vertical centering on hover */
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Subtle styling for surrounding photo overlays - on INNER side */
+    .photo-card:not(.center) .photo-info {
+      bottom: auto;
+      /* Reset bottom positioning */
+      top: 50%;
+      /* Vertically center */
+      transform: translateY(-50%);
+      opacity: 0;
+      /* Hidden by default */
+      background: rgba(0, 0, 0, 0.85);
+      /* Solid background */
+      border-radius: 8px;
+      padding: 0.75em 1em;
+      backdrop-filter: blur(10px);
+      width: max-content;
+      /* Fit content width */
+      max-width: 200px;
+      /* Limit max width */
+      transition: opacity 0.3s ease;
+    }
+
+    /* Photo on LEFT of center: info appears on RIGHT side (inner) */
+    .photo-card.photo-left .photo-info {
+      left: 100%;
+      /* Position to right of photo */
+      margin-left: 10px;
+      /* Small gap */
+      right: auto;
+    }
+
+    /* Photo on RIGHT of center: info appears on LEFT side (inner) */
+    .photo-card.photo-right .photo-info {
+      right: 100%;
+      /* Position to left of photo */
+      margin-right: 10px;
+      /* Small gap */
+      left: auto;
+    }
+
+    .photo-card:not(.center) .photo-title {
+      font-size: 0.9em;
+      /* Smaller header */
+      font-weight: 600;
+      margin-bottom: 0.25em;
+    }
+
+    .photo-card:not(.center) .photo-commonality {
+      font-size: 0.7em;
+      /* Smaller similarity % */
+      margin-bottom: 0.25em;
+    }
+
+    .photo-card:not(.center) .photo-terms {
+      font-size: 0.65rem;
+      /* Much smaller terms */
+      white-space: nowrap;
+      /* Keep all terms on one line */
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .photo-card:not(.center) .term-tag {
+      background: transparent;
+      /* No background */
+      border: none;
+      /* No border */
+      padding: 0;
+      /* No padding */
+      font-weight: 400;
+      /* Normal weight */
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+      /* Stronger shadow for readability */
+      display: inline;
+      /* Inline for comma separation */
+    }
+
+    .photo-card:not(.center) .term-tag:not(:last-child)::after {
+      content: ", ";
+      /* Add comma separator with space */
+    }
+
+    /* Hide info toggle button on surrounding photos */
+    .photo-card:not(.center) .info-toggle {
+      display: none;
+    }
+
+    /* When hidden, show just the icon button at bottom */
+    .photo-info.hidden {
+      opacity: 1 !important;
+      background: transparent;
+      padding: 0.5em;
+      transform: translateY(0);
+    }
+
+    .photo-info.hidden>*:not(.info-toggle) {
+      display: none;
+    }
+
+    .photo-info.hidden .info-toggle {
+      bottom: 8px;
+      top: auto;
+      left: 8px;
+    }
+
+    .photo-title {
+      font-weight: 700;
+      font-size: 1.2em;
+      margin-bottom: 0.5em;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+      color: #fff;
+    }
+
+    .photo-commonality {
+      font-size: 0.9em;
+      color: #ff8844;
+      margin-bottom: 0.5em;
+      font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .photo-terms {
+      font-size: 0.85em;
+      color: #fff;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5em;
+    }
+
+    .term-tag {
+      background: rgba(255, 102, 0, 0.8);
+      padding: 0.3em 0.6em;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 140, 60, 1);
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .center-indicator {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 60px;
+      height: 60px;
+      border: 2px solid rgba(255, 102, 0, 0.3);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Info panel - REMOVED completely per user request */
+    .info-panel {
+      display: none !important;
+    }
+
+    .loading {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.95);
+      z-index: 100;
+      font-size: 1.2em;
+      color: #ff6600;
+    }
+
+    .loading.hidden {
+      display: none;
+    }
+
+    /* Thumbnail Preview Panel */
+    .thumbnail-panel {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #ff6600;
+      border-radius: 12px;
+      padding: 1.5em;
+      max-width: 600px;
+      z-index: 200;
+      backdrop-filter: blur(10px);
+      display: none;
+      max-height: 200px;
+      overflow-y: auto;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .thumbnail-panel.active {
+      display: block;
+    }
+
+    .thumbnail-panel-title {
+      font-size: 0.9em;
+      color: #ff6600;
+      margin-bottom: 1em;
+      font-weight: 600;
+    }
+
+    .thumbnail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+      gap: 0.75em;
+    }
+
+    .thumbnail-item {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid rgba(255, 102, 0, 0.2);
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .thumbnail-item:hover {
+      border-color: #ff6600;
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 102, 0, 0.4);
+    }
+
+    .thumbnail-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .thumbnail-label {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 0.65em;
+      padding: 0.25em;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Full Overlay Modal */
+    .overlay-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      z-index: 300;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 2em;
+    }
+
+    .overlay-modal.active {
+      display: flex;
+    }
+
+    .overlay-content {
+      background: #fff;
+      border-radius: 15px;
+      padding: 2em;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .overlay-close {
+      position: absolute;
+      top: 1em;
+      right: 1em;
+      background: rgba(255, 102, 0, 0.1);
+      border: none;
+      color: #ff6600;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .overlay-close:hover {
+      background: #ff6600;
+      color: white;
+      transform: rotate(90deg);
+    }
+
+    .overlay-photo {
+      width: 100%;
+      max-height: 400px;
+      border-radius: 12px;
+      margin-bottom: 1.5em;
+      object-fit: cover;
+    }
+
+    .overlay-title {
+      font-size: 1.5em;
+      font-weight: 600;
+      margin-bottom: 0.5em;
+      color: #ff6600;
+    }
+
+    .overlay-description {
+      font-size: 0.95em;
+      color: #333;
+      margin-bottom: 1em;
+      line-height: 1.6;
+    }
+
+    .overlay-terms {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5em;
+      margin-bottom: 1.5em;
+    }
+
+    .overlay-term {
+      background: rgba(255, 102, 0, 0.2);
+      color: #ff6600;
+      padding: 0.4em 0.8em;
+      border-radius: 6px;
+      font-size: 0.85em;
+      border: 1px solid rgba(255, 102, 0, 0.3);
+    }
+
+    /* Waypoint Dots */
+    .waypoint-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff6600;
+      border: 2px solid #fff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 8px rgba(255, 102, 0, 0.6);
+      z-index: 9999;
+    }
+
+    /* Perspective color coding - each person gets a color */
+    /* Dad = Blue */
+    .waypoint-dot[data-perspective="Dad"] {
+      background: #4A90E2;
+      box-shadow: 0 0 8px rgba(74, 144, 226, 0.6);
+    }
+
+    .waypoint-dot[data-perspective="Dad"].disagree {
+      background: #2E5C8A;
+      box-shadow: 0 0 8px rgba(46, 92, 138, 0.6);
+    }
+
+    .waypoint-dot[data-perspective="Dad"]:hover {
+      background: #5FA3F5;
+      box-shadow: 0 0 15px rgba(74, 144, 226, 1);
+    }
+
+    /* Sister = Yellow */
+    .waypoint-dot[data-perspective="Sister"] {
+      background: #F5D547;
+      box-shadow: 0 0 8px rgba(245, 213, 71, 0.6);
+    }
+
+    .waypoint-dot[data-perspective="Sister"].disagree {
+      background: #C4A834;
+      box-shadow: 0 0 8px rgba(196, 168, 52, 0.6);
+    }
+
+    .waypoint-dot[data-perspective="Sister"]:hover {
+      background: #FFE666;
+      box-shadow: 0 0 15px rgba(245, 213, 71, 1);
+    }
+
+    /* Mom = Green */
+    .waypoint-dot[data-perspective="Mom"] {
+      background: #50C878;
+      box-shadow: 0 0 8px rgba(80, 200, 120, 0.6);
+    }
+
+    .waypoint-dot[data-perspective="Mom"].disagree {
+      background: #389657;
+      box-shadow: 0 0 8px rgba(56, 150, 87, 0.6);
+    }
+
+    .waypoint-dot[data-perspective="Mom"]:hover {
+      background: #6ADB92;
+      box-shadow: 0 0 15px rgba(80, 200, 120, 1);
+    }
+
+    /* Photographer = Orange */
+    .waypoint-dot[data-perspective="Photographer"] {
+      background: #FF8C42;
+      box-shadow: 0 0 8px rgba(255, 140, 66, 0.6);
+    }
+
+    .waypoint-dot[data-perspective="Photographer"].disagree {
+      background: #CC6F35;
+      box-shadow: 0 0 8px rgba(204, 111, 53, 0.6);
+    }
+
+    .waypoint-dot[data-perspective="Photographer"]:hover {
+      background: #FFA55C;
+      box-shadow: 0 0 15px rgba(255, 140, 66, 1);
+    }
+
+    /* Default/fallback for any other perspectives */
+    .waypoint-dot:hover {
+      width: 16px;
+      height: 16px;
+    }
+
+    .waypoint-tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.9);
+      color: #fff;
+      padding: 0.5em 0.75em;
+      border-radius: 4px;
+      font-size: 0.75em;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 11;
+      display: none;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 0.5em;
+    }
+
+    .waypoint-dot:hover .waypoint-tooltip {
+      display: block;
+    }
+
+    /* Photo Hover Tooltip */
+    .photo-tooltip {
+      position: fixed;
+      background: rgba(0, 0, 0, 0.95);
+      color: #fff;
+      padding: 1em;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 102, 0, 0.3);
+      font-size: 0.85em;
+      max-width: 250px;
+      pointer-events: none;
+      z-index: 500;
+      display: none;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .photo-tooltip.active {
+      display: block;
+      animation: tooltipFadeIn 0.3s ease;
+    }
+
+    @keyframes tooltipFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .tooltip-title {
+      font-weight: 600;
+      color: #ff6600;
+      margin-bottom: 0.5em;
+    }
+
+    .tooltip-terms {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3em;
+      margin-top: 0.5em;
+    }
+
+    .tooltip-term {
+      background: rgba(255, 102, 0, 0.2);
+      padding: 0.2em 0.5em;
+      border-radius: 3px;
+      font-size: 0.8em;
+    }
+
+    /* Universe Bridge - Unified navigation panel */
+    .universe-bridge {
+      position: fixed;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      z-index: 400;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      border-radius: 12px 0 0 12px;
+      border: 1px solid rgba(255, 102, 0, 0.3);
+      border-right: none;
+      box-shadow: -4px 0 16px rgba(0, 0, 0, 0.5);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .universe-bridge.collapsed {
+      transform: translateY(-50%) translateX(calc(100% - 45px));
+      cursor: pointer;
+      /* Indicate the collapsed area is clickable */
+    }
+
+    .bridge-tab-toggle {
+      position: absolute;
+      left: -45px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 45px;
+      height: 70px;
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(255, 102, 0, 0.4);
+      border-right: none;
+      border-radius: 12px 0 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #ff8844;
+      font-size: 1.5em;
+      transition: all 0.3s ease;
+    }
+
+    .bridge-tab-toggle:hover {
+      background: rgba(255, 102, 0, 0.2);
+      color: #ffaa66;
+      transform: translateY(-50%) scale(1.05);
+    }
+
+    .bridge-content {
+      padding: 1.5em;
+      width: 320px;
+      position: relative;
+    }
+
+    .bridge-close {
+      position: absolute;
+      top: 0.75em;
+      right: 0.75em;
+      background: rgba(255, 102, 0, 0.2);
+      border: 1px solid rgba(255, 102, 0, 0.4);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2em;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+
+    .bridge-close:hover {
+      background: rgba(255, 102, 0, 0.4);
+      transform: scale(1.1);
+    }
+
+    .bridge-section {
+      margin-bottom: 1.5em;
+      padding-bottom: 1.5em;
+      border-bottom: 1px solid rgba(255, 102, 0, 0.2);
+    }
+
+    .bridge-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .bridge-section h4 {
+      margin: 0 0 0.75em 0;
+      color: #ff8844;
+      font-size: 0.9em;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .search-input {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 102, 0, 0.3);
+      color: white;
+      padding: 0.75em 1em;
+      border-radius: 8px;
+      font-size: 0.95em;
+      width: 100%;
+      transition: all 0.3s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #ff6600;
+      box-shadow: 0 0 15px rgba(255, 102, 0, 0.3);
+    }
+
+    .search-input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Depth Presets */
+    .depth-presets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5em;
+      margin-bottom: 0.75em;
+    }
+
+    .depth-preset {
+      padding: 0.6em 0.4em;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 102, 0, 0.3);
+      border-radius: 6px;
+      color: white;
+      font-size: 0.85em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .depth-preset:hover {
+      background: rgba(255, 102, 0, 0.2);
+      border-color: #ff8844;
+    }
+
+    .depth-preset.active {
+      background: rgba(255, 102, 0, 0.3);
+      border-color: #ff6600;
+      font-weight: 600;
+    }
+
+    .depth-description {
+      font-size: 0.8em;
+      color: rgba(255, 255, 255, 0.7);
+      font-style: italic;
+    }
+
+    /* Playback controls */
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 1em;
+      margin-bottom: 0.75em;
+    }
+
+    .play-button {
+      flex: 1;
+      padding: 0.75em 1em;
+      background: rgba(255, 102, 0, 0.3);
+      border: 1px solid rgba(255, 102, 0, 0.5);
+      border-radius: 8px;
+      color: white;
+      font-size: 0.95em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5em;
+    }
+
+    .play-button:hover {
+      background: rgba(255, 102, 0, 0.4);
+      border-color: #ff8844;
+      transform: scale(1.02);
+    }
+
+    .play-button.playing {
+      background: rgba(255, 102, 0, 0.5);
+      border-color: #ff6600;
+    }
+
+    .playback-info {
+      font-size: 0.9em;
+      color: rgba(255, 255, 255, 0.8);
+      white-space: nowrap;
+    }
+
+    .playback-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+      font-size: 0.85em;
+    }
+
+    .playback-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+    }
+
+    .playback-option input[type="checkbox"] {
+      cursor: pointer;
+    }
+
+    .playback-option select {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 102, 0, 0.3);
+      color: white;
+      padding: 0.3em 0.5em;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+
+    .playback-option select:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #ff8844;
+    }
+
+    /* Perspective filters */
+    .perspective-filters {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5em;
+      margin-top: 0.75em;
+    }
+
+    /* Breadcrumb Trail - minimized at bottom center */
+    .breadcrumb-trail {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 400;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      padding: 0.5em 1em;
+      border-radius: 20px;
+      font-size: 0.75em;
+      color: rgba(255, 255, 255, 0.8);
+      white-space: nowrap;
+      max-width: 80vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .breadcrumb-item {
+      display: inline;
+      color: rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .breadcrumb-item:hover {
+      color: #ff6600;
+    }
+
+    .breadcrumb-item.active {
+      color: #ff6600;
+      font-weight: 600;
+    }
+
+    .breadcrumb-separator {
+      margin: 0 0.5em;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Project Page Tab */
+    .project-tab {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 400;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      padding: 0.75em 1.5em;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 102, 0, 0.3);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 0.9em;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .project-tab:hover {
+      background: rgba(255, 102, 0, 0.3);
+      border-color: #ff6600;
+      transform: scale(1.05);
+    }
+
+    .project-tab-icon {
+      margin-right: 0.5em;
+    }
+
+    /* Highlighted term styling */
+    .term-highlight {
+      background: rgba(255, 102, 0, 0.3);
+      padding: 0.1em 0.3em;
+      border-radius: 3px;
+      border-bottom: 2px solid #ff6600;
+    }
+
+    /* Perspectives Legend Panel */
+    .perspectives-panel {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 400;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 1em;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 102, 0, 0.3);
+      color: white;
+      max-width: 300px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .perspectives-panel.minimized {
+      padding: 0.5em;
+      max-width: 200px;
+    }
+
+    .perspectives-panel.minimized .perspective-list,
+    .perspectives-panel.minimized .perspective-legend,
+    .perspectives-panel.minimized .filter-controls {
+      display: none;
+    }
+
+    .perspectives-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75em;
+      font-weight: 600;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
+
+    .perspectives-panel.minimized .perspectives-header {
+      margin-bottom: 0;
+    }
+
+    .perspective-toggle {
+      background: rgba(255, 102, 0, 0.2);
+      border: none;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .perspective-toggle:hover {
+      background: rgba(255, 102, 0, 0.4);
+    }
+
+    .perspective-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+      margin-bottom: 1em;
+    }
+
+    .perspective-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      padding: 0.5em;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .perspective-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 102, 0, 0.3);
+    }
+
+    .perspective-item.active {
+      background: rgba(255, 102, 0, 0.2);
+      border-color: #ff6600;
+    }
+
+    .perspective-dot-preview {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .perspective-name {
+      font-size: 0.85em;
+      flex-grow: 1;
+      color: white;
+    }
+
+    .perspective-count {
+      font-size: 0.75em;
+      color: #aaa;
+    }
+
+    .filter-controls {
+      padding-top: 0.75em;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .filter-button {
+      padding: 0.6em 0.4em;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 102, 0, 0.3);
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .filter-button:hover {
+      background: rgba(255, 102, 0, 0.2);
+      border-color: #ff8844;
+    }
+
+    .filter-button.active {
+      background: rgba(255, 102, 0, 0.3);
+      border-color: #ff6600;
+      font-weight: 600;
+    }
+
+    .perspective-legend {
+      margin-top: 0.75em;
+      padding-top: 0.75em;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.75em;
+      color: #aaa;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+      margin-bottom: 0.3em;
+    }
+
+    .legend-dots {
+      display: flex;
+      gap: 0.3em;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+
+
+    #templateNav {
+      right: 20px;
+      position: absolute;
+      display: block;
+      text-align: center;
+      width: 100%;
+      max-width: 125px;
+      background-color: rgb(40, 167, 69);
+      font-weight: 600;
+      color: white;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 10px;
+    }
+
+    .project-tab a,
+    .project-tab a:link,
+    .project-tab a:visited,
+    .project-tab a:focus {
+      text-decoration: none;
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .project-tab a:hover {
+      letter-spacing: 1.5px;
+      font-weight: 800;
+    }
+
+    #export-standalone {
+      bottom: 20px !important;
+      top: auto !important;
+    }
+  </style>
+</head>
+
+<body>
+
+
+  <div class="spatial-container">
+    <div class="gallery-viewport">
+      <div class="photos-grid" id="photosGrid"></div>
+    </div>
+    <div class="center-indicator"></div>
+  </div>
+
+  <!-- Thumbnail Preview Panel - REMOVED per user request -->
+
+  <!-- Full Overlay Modal -->
+  <div class="overlay-modal" id="overlayModal">
+    <div class="overlay-content">
+      <button class="overlay-close" onclick="closeOverlay()">×</button>
+      <img id="overlayPhoto" class="overlay-photo" src="" alt="">
+      <div class="overlay-title" id="overlayTitle"></div>
+      <div class="overlay-description" id="overlayDescription"></div>
+      <div class="overlay-terms" id="overlayTerms"></div>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">Loading gallery...</div>
+
+  <!-- Project Page Tab-->
+  <div class="project-tab" id="projectTab" style="display: none;">
+    <span class="project-tab-icon">✏️</span>
+    <span><a href="../creator/index.html?edit=1">Edit Project</a></span>
+  </div>
+
+  <!-- Universe Bridge Panel - Unified navigation controls -->
+  <div class="universe-bridge collapsed" id="universeBridge">
+    <div class="bridge-tab-toggle" id="bridgeToggle">🌉</div>
+
+    <div class="bridge-content">
+      <button class="bridge-close" id="bridgeClose">×</button>
+      <!-- Section 1: Search -->
+      <div class="bridge-section">
+        <h4>🔍 Search</h4>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search by terms...">
+      </div>
+
+      <!-- Section 2: Perspectives -->
+      <div class="bridge-section" id="perspectivesSection" style="display: none;">
+        <h4>👁️ Perspectives</h4>
+        <div class="perspective-list" id="perspectiveList"></div>
+        <div class="perspective-filters">
+          <button class="filter-button" id="filterAgreements">✅</button>
+          <button class="filter-button" id="filterDisagreements">❌</button>
+          <button class="filter-button" id="clearFilters">Clear</button>
+        </div>
+      </div>
+
+      <!-- Section 3: Depth Control -->
+      <div class="bridge-section">
+        <h4>📐 Depth</h4>
+        <div class="depth-presets">
+          <button class="depth-preset active" data-depth="balanced">⚖️ Balanced</button>
+          <button class="depth-preset" data-depth="tight">🤝 Tight</button>
+          <button class="depth-preset" data-depth="spread">🌟 Spread</button>
+        </div>
+        <div class="depth-description" id="depthDescription">
+          Good balance between relationships and clarity
+        </div>
+      </div>
+
+      <!-- Section 4: Playback -->
+      <div class="bridge-section">
+        <h4>▶️ Playback</h4>
+        <div class="playback-controls">
+          <button class="play-button" id="playButton">
+            <span class="play-icon">▶️</span>
+            <span class="play-text">Play</span>
+          </button>
+          <div class="playback-info" id="playbackInfo">
+            <span id="currentPhotoNum">1</span> / <span id="totalPhotos">0</span>
+          </div>
+        </div>
+        <div class="playback-options">
+          <label class="playback-option">
+            <input type="checkbox" id="loopPlayback" checked>
+            <span>Loop</span>
+          </label>
+          <label class="playback-option">
+            <span>Speed:</span>
+            <select id="playbackSpeed">
+              <option value="2000">Fast (2s)</option>
+              <option value="3000" selected>Normal (3s)</option>
+              <option value="5000">Slow (5s)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breadcrumb Trail -->
+  <div class="breadcrumb-trail" id="breadcrumbTrail" style="display: none;">
+    <div id="breadcrumbItems"></div>
+  </div>
+
+  <!-- Photo Tooltip -->
+  <div class="photo-tooltip" id="photoTooltip"></div>
+
+  <!-- Connection Lines SVG -->
+  <svg class="connection-lines" id="connectionLines"></svg>
+
+  <!-- Perspective Connection Lines SVG -->
+  <svg class="perspective-lines" id="perspectiveLines" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;"></svg>
+
+  <!-- Waypoint Universe Bridge -->
+  <script src="../shared/waypoint-data-bridge.js"></script>
+  <!-- Universe integration commented out to avoid localhost:9847 errors -->
+  <!-- <script src="../shared/waypoint-universe-integration.js"></script> -->
+
+  <script src="../standalone-export.js"></script>
+  <script>
+    let galleryData = null;
+    let centerPhotoIndex = 0;
+    let allPhotos = [];
+    let commonalityMatrix = [];
+    let navigationHistory = [];
+    let currentSearchFilter = '';
+    let filteredPhotoIndices = null;
+    let activePerspectiveFilter = null;
+    let activeAgreementFilter = null; // 'agree', 'disagree', or null
+    let perspectivesWithColors = []; // Load from gallery data
+
+    // Playback state
+    let playbackInterval = null;
+    let isPlaying = false;
+    let wasPlayingBeforeHover = false;
+
+    async function loadGalleryData() {
+      try {
+        const response = await fetch('../gallery-data.json');
+        galleryData = await response.json();
+        allPhotos = galleryData.photos || [];
+
+        if (allPhotos.length === 0) {
+          document.getElementById('loading').innerHTML = 'No photos found';
+          return;
+        }
+
+        // Load perspectives with colors (default if not in data)
+        perspectivesWithColors = galleryData.perspectives || [
+          { name: 'Dad', color: '#4A90E2', desc: 'Engineering mind - notices technical details' },
+          { name: 'Sister', color: '#F5D547', desc: 'Social media lens - notices aesthetic moments' },
+          { name: 'Mom', color: '#50C878', desc: 'Organizer mindset - notices logistics and people' },
+          { name: 'Photographer', color: '#FF8C42', desc: 'Artistic eye - notices composition and lighting' }
+        ];
+
+        calculateCommonalities();
+        initializePerspectivesPanel();
+        renderGallery();
+        initializeEventListeners();
+        document.getElementById('loading').classList.add('hidden');
+
+        // Initialize Waypoint Universe (automatic sharing)
+        if (typeof WaypointUniverseIntegration !== 'undefined') {
+          WaypointUniverseIntegration.init({
+            projectId: galleryData.metadata?.gallery_id || 'spatial-gallery',
+            galleryData: galleryData,
+            participateInUniverse: true  // Users can opt-out via settings
+          });
+          console.log('🌌 Waypoint Universe connected');
+        }
+      } catch (error) {
+        console.error('Error loading gallery:', error);
+        document.getElementById('loading').innerHTML = 'Error loading gallery';
+      }
+    }
+
+    // Current depth preset
+    let currentDepthPreset = 'balanced';
+    const DEPTH_PRESETS = {
+      tight: { minDepth: 80, maxDepth: 300, description: 'Photos cluster tightly - shows relationships' },
+      balanced: { minDepth: 100, maxDepth: 400, description: 'Good balance between relationships and clarity' },
+      spread: { minDepth: 130, maxDepth: 550, description: 'More separation - easier to see individual photos' }
+    };
+
+    // Playback functions
+    function togglePlayback() {
+      if (isPlaying) {
+        stopPlayback();
+      } else {
+        startPlayback();
+      }
+    }
+
+    function startPlayback() {
+      isPlaying = true;
+      const playButton = document.getElementById('playButton');
+      playButton.classList.add('playing');
+      playButton.querySelector('.play-icon').textContent = '⏸️';
+      playButton.querySelector('.play-text').textContent = 'Pause';
+
+      // Get playback speed
+      const speed = parseInt(document.getElementById('playbackSpeed').value);
+
+      // Start interval
+      playbackInterval = setInterval(advanceToNextPhoto, speed);
+    }
+
+    function stopPlayback() {
+      isPlaying = false;
+      wasPlayingBeforeHover = false;
+      const playButton = document.getElementById('playButton');
+      playButton.classList.remove('playing');
+      playButton.querySelector('.play-icon').textContent = '▶️';
+      playButton.querySelector('.play-text').textContent = 'Play';
+
+      // Clear interval
+      if (playbackInterval) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+      }
+    }
+
+    function pausePlaybackTemporarily() {
+      wasPlayingBeforeHover = true;
+      if (playbackInterval) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+      }
+    }
+
+    function resumePlaybackFromHover() {
+      wasPlayingBeforeHover = false;
+      if (isPlaying) {
+        const speed = parseInt(document.getElementById('playbackSpeed').value);
+        playbackInterval = setInterval(advanceToNextPhoto, speed);
+      }
+    }
+
+    function advanceToNextPhoto() {
+      // Find next photo based on order field
+      const sortedPhotos = [...allPhotos].sort((a, b) => a.order - b.order);
+      const currentIndex = sortedPhotos.findIndex(p => p.order === allPhotos[centerPhotoIndex].order);
+
+      let nextIndex = currentIndex + 1;
+
+      // Check if loop is enabled
+      const shouldLoop = document.getElementById('loopPlayback').checked;
+
+      if (nextIndex >= sortedPhotos.length) {
+        if (shouldLoop) {
+          nextIndex = 0;
+        } else {
+          stopPlayback();
+          return;
+        }
+      }
+
+      // Find the photo in allPhotos array
+      const nextPhoto = sortedPhotos[nextIndex];
+      const actualIndex = allPhotos.findIndex(p => p.order === nextPhoto.order);
+
+      selectPhoto(actualIndex, true); // true = from playback, don't stop playback
+    }
+
+    function updatePlaybackUI() {
+      // Update current photo number based on order
+      const currentOrder = allPhotos[centerPhotoIndex].order + 1; // +1 for display (0-indexed to 1-indexed)
+      document.getElementById('currentPhotoNum').textContent = currentOrder;
+    }
+
+    function initializeEventListeners() {
+      // Universe Bridge toggle - click tab OR entire collapsed bridge to expand
+      const bridgeToggle = document.getElementById('bridgeToggle');
+      const universeBridge = document.getElementById('universeBridge');
+
+      bridgeToggle.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent event from bubbling to universeBridge
+        universeBridge.classList.toggle('collapsed');
+      });
+
+      // Close button
+      const bridgeClose = document.getElementById('bridgeClose');
+      bridgeClose.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent event from bubbling
+        universeBridge.classList.add('collapsed');
+      });
+
+      // Allow clicking anywhere on the collapsed bridge to expand it
+      universeBridge.addEventListener('click', (e) => {
+        // Only expand if collapsed - any click on the collapsed bridge expands it
+        if (universeBridge.classList.contains('collapsed')) {
+          universeBridge.classList.remove('collapsed');
+        }
+      });
+
+      // Search input
+      const searchInput = document.getElementById('searchInput');
+      searchInput.addEventListener('input', (e) => {
+        currentSearchFilter = e.target.value.toLowerCase();
+        applySearchFilter();
+      });
+
+      // Depth preset buttons
+      document.querySelectorAll('.depth-preset').forEach(btn => {
+        btn.addEventListener('click', function () {
+          // Update active state
+          document.querySelectorAll('.depth-preset').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+
+          // Update current preset
+          currentDepthPreset = this.dataset.depth;
+
+          // Update description
+          const desc = DEPTH_PRESETS[currentDepthPreset].description;
+          document.getElementById('depthDescription').textContent = desc;
+
+          // Re-render with new depth
+          renderGallery();
+        });
+      });
+
+      // Playback controls
+      const playButton = document.getElementById('playButton');
+      playButton.addEventListener('click', togglePlayback);
+
+      // Update total photos count and current photo
+      document.getElementById('totalPhotos').textContent = allPhotos.length;
+      updatePlaybackUI();
+
+      // Project tab - check if not LIVE environment
+      const projectTab = document.getElementById('projectTab');
+      if (!window.location.pathname.includes('/LIVE/')) {
+        projectTab.style.display = 'block';
+        projectTab.addEventListener('click', () => {
+          // Navigate back to project page (parent directory)
+          window.location.href = '../index.html';
+        });
+      }
+
+      // Info panel minimize/restore
+      const infoPanel = document.getElementById('infoPanel');
+      const infoClose = document.getElementById('infoClose');
+      const infoIcon = document.getElementById('infoIcon');
+
+      if (infoClose) {
+        infoClose.addEventListener('click', (e) => {
+          e.stopPropagation();
+          infoPanel.classList.add('minimized');
+        });
+      }
+
+      if (infoPanel) {
+        infoPanel.addEventListener('click', () => {
+          if (infoPanel.classList.contains('minimized')) {
+            infoPanel.classList.remove('minimized');
+          }
+        });
+      }
+
+      // Window resize for responsive layout
+      window.addEventListener('resize', () => {
+        renderGallery();
+      });
+    }
+
+    function calculateCommonalities() {
+      commonalityMatrix = [];
+
+      for (let i = 0; i < allPhotos.length; i++) {
+        commonalityMatrix[i] = [];
+        for (let j = 0; j < allPhotos.length; j++) {
+          if (i === j) {
+            commonalityMatrix[i][j] = 1;
+          } else {
+            commonalityMatrix[i][j] = getCommonality(allPhotos[i], allPhotos[j]);
+          }
+        }
+      }
+    }
+
+    function getCommonality(photoA, photoB) {
+      const termsA = getPhotoTerms(photoA);
+      const termsB = getPhotoTerms(photoB);
+
+      if (termsA.length === 0 || termsB.length === 0) return 0;
+
+      const shared = termsA.filter(t => termsB.includes(t)).length;
+      const unique = new Set([...termsA, ...termsB]).size;
+
+      return shared / unique;
+    }
+
+    function getPhotoTerms(photo) {
+      if (!photo['sub-points']) return [];
+      const terms = [];
+      photo['sub-points'].forEach(wp => {
+        if (wp.infoTerms && Array.isArray(wp.infoTerms)) {
+          terms.push(...wp.infoTerms);
+        }
+      });
+      return [...new Set(terms)];
+    }
+
+    function initializePerspectivesPanel() {
+      // Collect all unique perspectives from waypoints
+      const perspectivesMap = {};
+
+      allPhotos.forEach(photo => {
+        if (photo['sub-points']) {
+          photo['sub-points'].forEach(wp => {
+            if (wp.perspective) {
+              if (!perspectivesMap[wp.perspective]) {
+                perspectivesMap[wp.perspective] = {
+                  name: wp.perspective,
+                  desc: wp.perspectiveDesc || '',
+                  count: 0,
+                  avgSimilarity: 0,
+                  totalSimilarity: 0
+                };
+              }
+              perspectivesMap[wp.perspective].count++;
+              if (wp.similarity !== undefined) {
+                perspectivesMap[wp.perspective].totalSimilarity += wp.similarity;
+              }
+            }
+          });
+        }
+      });
+
+      const perspectives = Object.values(perspectivesMap);
+
+      // Calculate average similarity for each perspective
+      perspectives.forEach(p => {
+        if (p.count > 0) {
+          p.avgSimilarity = p.totalSimilarity / p.count;
+        }
+      });
+
+      if (perspectives.length === 0) {
+        // No perspectives found, hide section
+        return;
+      }
+
+      // Show perspectives section in Universe Bridge
+      const section = document.getElementById('perspectivesSection');
+      const list = document.getElementById('perspectiveList');
+      section.style.display = 'block';
+
+      // Color map for perspectives
+      const perspectiveColors = {
+        'Dad': '#4A90E2',
+        'Sister': '#F5D547',
+        'Mom': '#50C878',
+        'Photographer': '#FF8C42'
+      };
+
+      list.innerHTML = perspectives.map(p => {
+        const dotColor = perspectiveColors[p.name] || '#ff6600'; // Fallback to orange
+        const avgSimPercent = p.avgSimilarity ? (p.avgSimilarity * 100).toFixed(0) : '0';
+        return `
+          <div class="perspective-item" data-perspective="${p.name}" title="${p.desc} - Avg Similarity: ${avgSimPercent}%">
+            <div class="perspective-dot-preview" style="background: ${dotColor};"></div>
+            <span class="perspective-name">${p.name}</span>
+            <span class="perspective-count">${p.count} <small style="color: #999;">(${avgSimPercent}%)</small></span>
+          </div>
+        `;
+      }).join('');
+
+      // Add event listeners for perspective filtering
+
+      // Perspective filter clicks
+      list.querySelectorAll('.perspective-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const perspective = item.dataset.perspective;
+
+          // Toggle active state
+          if (activePerspectiveFilter === perspective) {
+            activePerspectiveFilter = null;
+            item.classList.remove('active');
+          } else {
+            list.querySelectorAll('.perspective-item').forEach(i => i.classList.remove('active'));
+            activePerspectiveFilter = perspective;
+            item.classList.add('active');
+          }
+
+          applyPerspectiveFilters();
+        });
+      });
+
+      // Agreement filter buttons
+      document.getElementById('filterAgreements').addEventListener('click', function () {
+        activeAgreementFilter = activeAgreementFilter === 'agree' ? null : 'agree';
+        this.classList.toggle('active');
+        document.getElementById('filterDisagreements').classList.remove('active');
+        applyPerspectiveFilters();
+      });
+
+      document.getElementById('filterDisagreements').addEventListener('click', function () {
+        activeAgreementFilter = activeAgreementFilter === 'disagree' ? null : 'disagree';
+        this.classList.toggle('active');
+        document.getElementById('filterAgreements').classList.remove('active');
+        applyPerspectiveFilters();
+      });
+
+      document.getElementById('clearFilters').addEventListener('click', () => {
+        activePerspectiveFilter = null;
+        activeAgreementFilter = null;
+        list.querySelectorAll('.perspective-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.filter-button').forEach(b => b.classList.remove('active'));
+        applyPerspectiveFilters();
+      });
+    }
+
+    function applyPerspectiveFilters() {
+      // Show/hide waypoint dots based on active filters
+      const dots = document.querySelectorAll('.waypoint-dot-overlay');
+
+      dots.forEach(dot => {
+        let show = true;
+
+        // Check perspective filter
+        if (activePerspectiveFilter) {
+          show = show && dot.dataset.perspective === activePerspectiveFilter;
+        }
+
+        // Check agreement filter
+        if (activeAgreementFilter === 'agree') {
+          show = show && dot.classList.contains('agree');
+        } else if (activeAgreementFilter === 'disagree') {
+          show = show && dot.classList.contains('disagree');
+        }
+
+        dot.style.display = show ? 'block' : 'none';
+      });
+    }
+
+    function renderGallery() {
+      const grid = document.getElementById('photosGrid');
+      grid.innerHTML = '';
+
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+
+      // Determine which photos to display
+      const photosToDisplay = filteredPhotoIndices || allPhotos.map((_, i) => i);
+
+      // Calculate positions using force-directed layout
+      const positions = calculatePositions(centerX, centerY);
+
+      photosToDisplay.forEach((photoIdx) => {
+        const idx = photoIdx;
+        const photo = allPhotos[idx];
+        const commonality = commonalityMatrix[centerPhotoIndex][idx];
+        const distance = 1 - commonality;
+
+        const pos = positions[idx];
+
+        // Calculate blur based on distance (REDUCED - max 1px for subtle effect)
+        const blurAmount = idx === centerPhotoIndex ? 0 : Math.min(1, distance * 1.5);
+
+        // Calculate brightness based on distance
+        const brightness = idx === centerPhotoIndex ? 1 : Math.max(0.6, 1 - distance * 0.4);
+
+        // Calculate size based on distance (farther = smaller)
+        // Center: 25%, Close: 20%, Medium: 15%, Far: 12%, Very far: 10%
+        let widthPercent;
+        if (idx === centerPhotoIndex) {
+          widthPercent = 25;
+        } else {
+          // Scale from 20% (close) to 10% (far) based on distance
+          widthPercent = 20 - (distance * 10);
+          widthPercent = Math.max(10, Math.min(20, widthPercent)); // Clamp between 10-20%
+        }
+
+        const card = document.createElement('div');
+        card.className = 'photo-card';
+        if (idx === centerPhotoIndex) card.classList.add('center');
+        else if (distance < 0.25) card.classList.add('near');
+        else if (distance < 0.55) card.classList.add('far');
+        else card.classList.add('distant');
+
+        // Add class for left/right positioning (for info box placement)
+        if (idx !== centerPhotoIndex) {
+          if (pos.x < centerX) {
+            card.classList.add('photo-left'); // Photo is left of center, info goes on right (inner)
+          } else {
+            card.classList.add('photo-right'); // Photo is right of center, info goes on left (inner)
+          }
+        }
+
+        // Position and size
+        card.style.left = pos.x + 'px';
+        card.style.top = pos.y + 'px';
+        card.style.width = widthPercent + '%';
+        card.style.height = 'auto';
+        card.style.position = 'absolute';
+
+        // Apply individual blur and brightness filter
+        card.style.filter = `brightness(${brightness}) blur(${blurAmount}px)`;
+
+        // Set z-index: center is 1, others layer on top
+        card.style.zIndex = idx === centerPhotoIndex ? 1 : Math.floor((1 - distance) * 100) + 2;
+
+        const img = document.createElement('img');
+        img.src = photo.cloudUrl || photo.localPath || photo.filename;
+        img.alt = photo.title;
+
+        const info = document.createElement('div');
+        info.className = 'photo-info';
+        info.innerHTML = `
+          <button class="info-toggle">×</button>
+          <div class="photo-title">${photo.title}</div>
+          <div class="photo-commonality">${Math.round(commonality * 100)}% similar</div>
+          <div class="photo-terms">
+            ${getPhotoTerms(photo).slice(0, 3).map(t => `<span class="term-tag">${t}</span>`).join('')}
+          </div>
+        `;
+
+        card.appendChild(img);
+        card.appendChild(info);
+
+        // Add toggle button handler for photo-info
+        const toggleBtn = info.querySelector('.info-toggle');
+        if (toggleBtn) {
+          toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            info.classList.toggle('hidden');
+            toggleBtn.textContent = info.classList.contains('hidden') ? 'ℹ️' : '×';
+          });
+        }
+
+        // Add waypoint dots for ALL photos (to show perspective connection lines)
+        if (photo['sub-points'] && photo['sub-points'].length > 0) {
+          setTimeout(() => renderWaypointDots(card, photo), 100);
+        }
+
+        // Add click handler to navigate to photo (except center photo)
+        if (idx !== centerPhotoIndex) {
+          card.style.cursor = 'pointer';
+          card.addEventListener('click', (e) => {
+            // Don't trigger if clicking on info toggle button
+            if (e.target.classList.contains('info-toggle')) return;
+            selectPhoto(idx);
+          });
+        }
+
+        // Pause playback on hover over any photo
+        card.addEventListener('mouseenter', () => {
+          if (isPlaying) {
+            pausePlaybackTemporarily();
+          }
+        });
+
+        card.addEventListener('mouseleave', () => {
+          if (wasPlayingBeforeHover) {
+            resumePlaybackFromHover();
+          }
+        });
+
+        grid.appendChild(card);
+      });
+
+      // Draw connection lines and highlight clusters
+      setTimeout(() => {
+        drawConnectionLines();
+        drawPerspectiveLines();
+        highlightSemanticClusters();
+      }, 100);
+
+      // Note: We now keep waypoint dots on ALL photos (not just center) to show perspective connection lines
+    }
+
+    function calculatePositions(centerX, centerY) {
+      const positions = {};
+
+      // Center photo at origin
+      positions[centerPhotoIndex] = { x: centerX, y: centerY };
+
+      // Sort other photos by commonality
+      const others = allPhotos
+        .map((p, idx) => ({ idx, commonality: commonalityMatrix[centerPhotoIndex][idx] }))
+        .filter(p => p.idx !== centerPhotoIndex)
+        .sort((a, b) => b.commonality - a.commonality);
+
+      // ONE-POINT PERSPECTIVE SYSTEM
+      // Vanishing point - where dissimilar photos converge
+      // Each gallery can have unique vanishing point for variety
+
+      // Check if gallery has custom vanishing point in metadata
+      let vpX = 0.5;  // Default: center horizontal
+      let vpY = 0.2;  // Default: upper area
+
+      if (window.galleryData && window.galleryData.spatialSettings && window.galleryData.spatialSettings.vanishingPoint) {
+        vpX = window.galleryData.spatialSettings.vanishingPoint.x || 0.5;
+        vpY = window.galleryData.spatialSettings.vanishingPoint.y || 0.2;
+      }
+
+      const vanishingPoint = {
+        x: window.innerWidth * vpX,
+        y: window.innerHeight * vpY
+      };
+
+      // Viewport safe bounds
+      const padding = 100;
+      const minX = padding;
+      const maxX = window.innerWidth - padding;
+      const minY = padding;
+      const maxY = window.innerHeight - padding;
+
+      others.forEach((item, i) => {
+        const commonality = item.commonality;
+        const distance = 1 - commonality; // 0 = very similar, 1 = very different
+
+        // Calculate angle from vanishing point through center photo
+        // This creates rays radiating from vanishing point
+        const totalOthers = others.length;
+        const angleSpread = Math.PI * 1.5; // 270° spread
+        const angleStart = -Math.PI * 0.75; // Start from upper-left
+        const baseAngle = angleStart + (i / totalOthers) * angleSpread;
+
+        // Add organic variation
+        const angleJitter = (Math.random() - 0.5) * 0.2;
+        const angle = baseAngle + angleJitter;
+
+        // Direction vector from vanishing point
+        const dirX = Math.cos(angle);
+        const dirY = Math.sin(angle);
+
+        // Distance along perspective ray - controlled by depth preset
+        // Similar photos (low distance) = close to center (viewer)
+        // Dissimilar photos (high distance) = far toward vanishing point
+        const preset = DEPTH_PRESETS[currentDepthPreset];
+        const minDepth = preset.minDepth;
+        const maxDepth = preset.maxDepth;
+        const depth = minDepth + (distance * (maxDepth - minDepth));
+
+        // Position = vanishing point + (direction * depth) moving toward viewer (center)
+        // We work backwards from vanishing point toward viewer
+        let x = vanishingPoint.x + (dirX * depth);
+        let y = vanishingPoint.y + (dirY * depth);
+
+        // Clamp to viewport bounds
+        x = Math.max(minX, Math.min(maxX, x));
+        y = Math.max(minY, Math.min(maxY, y));
+
+        positions[item.idx] = { x, y };
+      });
+
+      return positions;
+    }
+
+    function renderWaypointDots(cardElement, photo) {
+      // Clear any existing waypoint dots for this photo
+      const existingDots = document.querySelectorAll('.waypoint-dot-overlay');
+      existingDots.forEach(dot => {
+        if (dot.dataset.photoId === photo.filename) {
+          dot.remove();
+        }
+      });
+
+      // Get card position on page
+      const cardRect = cardElement.getBoundingClientRect();
+      if (!cardRect || cardRect.width === 0) {
+        console.warn('Card not ready for waypoint rendering');
+        return;
+      }
+
+      photo['sub-points'].forEach((waypoint, wpIndex) => {
+        const dot = document.createElement('div');
+        dot.className = 'waypoint-dot waypoint-dot-overlay';
+        dot.dataset.photoId = photo.filename;
+        dot.dataset.waypointIndex = wpIndex;
+
+        // Apply similarity-based shading (0 = dark shade, 1 = bright tint)
+        if (waypoint.similarity !== undefined) {
+          // Store similarity as data attribute for CSS or JS access
+          dot.dataset.similarity = waypoint.similarity;
+
+          // Apply CSS class based on similarity range
+          if (waypoint.similarity > 0.6) {
+            dot.classList.add('high-similarity'); // bright tint
+          } else if (waypoint.similarity < 0.3) {
+            dot.classList.add('low-similarity'); // dark shade
+          } else {
+            dot.classList.add('medium-similarity'); // pure color
+          }
+        }
+
+        // Store perspective for filtering
+        if (waypoint.perspective) {
+          dot.dataset.perspective = waypoint.perspective;
+        }
+
+        // Position based on waypoint coordinates relative to card position
+        const x = waypoint.xPercent || 50;
+        const y = waypoint.yPercent || 50;
+
+        // Calculate absolute position on page
+        const dotX = cardRect.left + (cardRect.width * x / 100);
+        const dotY = cardRect.top + (cardRect.height * y / 100);
+
+        dot.style.position = 'fixed'; // Fixed to viewport - UNTRAPPED!
+        dot.style.left = dotX + 'px';
+        dot.style.top = dotY + 'px';
+        dot.style.transform = 'translate(-50%, -50%)';
+        dot.style.zIndex = '9999'; // Force individual dots on top
+        dot.style.pointerEvents = 'auto'; // Make sure it's clickable
+
+        // Apply opacity if specified (SPATIAL update)
+        const opacity = waypoint.opacity !== undefined ? waypoint.opacity : 1.0;
+        dot.style.opacity = opacity;
+
+        // Add hover info card with current waypoint info + destination thumbnail
+        (function (wp, ph) {
+          let hoverCard = null;
+          let hideTimeout = null;
+
+          const showHoverCard = () => {
+            if (hoverCard) return; // Already showing
+
+            // Clear any pending hide
+            if (hideTimeout) {
+              clearTimeout(hideTimeout);
+              hideTimeout = null;
+            }
+
+            // Create hover card
+            hoverCard = document.createElement('div');
+            hoverCard.className = 'waypoint-hover-card';
+            hoverCard.style.cssText = `
+              position: fixed;
+              left: ${dotX + 20}px;
+              top: ${dotY}px;
+              transform: translateY(-50%);
+              background: rgba(0, 0, 0, 0.95);
+              color: white;
+              padding: 12px;
+              padding-top: 32px;
+              border-radius: 8px;
+              z-index: 50000;
+              max-width: 250px;
+              box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+              pointer-events: auto;
+              cursor: default;
+            `;
+
+            // Build title with perspective badge
+            const perspectiveBadge = wp.perspective
+              ? `<div style="display: inline-block; background: rgba(102, 167, 255, 0.3); padding: 2px 8px; border-radius: 4px; font-size: 10px; margin-bottom: 6px; border: 1px solid rgba(102, 167, 255, 0.5);">🔍 ${wp.perspective}'s Perspective</div>`
+              : '';
+
+            // Similarity badge (spectrum of togetherness)
+            let similarityBadge = '';
+            if (wp.similarity !== undefined) {
+              let similarityLabel = '';
+              let similarityColor = '';
+              if (wp.similarity > 0.6) {
+                similarityLabel = 'High Similarity';
+                similarityColor = '#28a745'; // green
+              } else if (wp.similarity > 0.3) {
+                similarityLabel = 'Medium Similarity';
+                similarityColor = '#ffc107'; // yellow
+              } else {
+                similarityLabel = 'Low Similarity';
+                similarityColor = '#dc3545'; // red
+              }
+              similarityBadge = `<span style="color: ${similarityColor}; font-size: 11px; margin-left: 6px; background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px;">🎨 ${(wp.similarity * 100).toFixed(0)}% ${similarityLabel}</span>`;
+            }
+
+            const title = wp.emoji
+              ? `${wp.emoji} ${wp.title || wp.name || 'Waypoint'}${similarityBadge}`
+              : `${wp.title || wp.name || 'Waypoint'}${similarityBadge}`;
+
+            const termsText = wp.infoTerms && wp.infoTerms.length > 0
+              ? wp.infoTerms.join(', ')
+              : 'No tags';
+
+            const perspectiveDesc = wp.perspectiveDesc
+              ? `<div style="font-size: 10px; color: #999; font-style: italic; margin-top: 4px; margin-bottom: 6px;">${wp.perspectiveDesc}</div>`
+              : '';
+
+            // If linked, show destination thumbnail + info
+            let destinationHTML = '';
+            let linkedPhotoIndex = -1;
+            if (wp.linkedPhotoId) {
+              const linkedId = (wp.linkedPhotoId || '').trim();
+              linkedPhotoIndex = allPhotos.findIndex(p => p.id === linkedId || p.filename === linkedId);
+              if (linkedPhotoIndex !== -1) {
+                const linkedPhoto = allPhotos[linkedPhotoIndex];
+                destinationHTML = `
+                  <div class="hover-destination" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); cursor: pointer; transition: opacity 0.2s;">
+                    <div style="font-size: 11px; color: #aaa; margin-bottom: 4px;">🔗 Click to go to:</div>
+                    <img src="${linkedPhoto.cloudUrl || linkedPhoto.localPath || linkedPhoto.filename}"
+                         style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; margin-bottom: 6px; border: 2px solid transparent; transition: border-color 0.2s;">
+                    <div style="font-weight: 600; font-size: 13px;">${linkedPhoto.emoji || ''} ${linkedPhoto.title}</div>
+                    <div style="font-size: 11px; color: #999;">📍 ${linkedPhoto.location || 'Unknown'} • Day ${linkedPhoto.day || '?'}</div>
+                  </div>
+                `;
+              }
+            }
+
+            hoverCard.innerHTML = `
+              <button class="hover-card-close" style="position: absolute; top: 4px; left: 4px; background: rgba(255,255,255,0.2); border: none; color: white; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">×</button>
+              ${perspectiveBadge}
+              <div style="font-weight: 600; margin-bottom: 4px;">${title}</div>
+              ${perspectiveDesc}
+              <div style="font-size: 11px; color: #aaa;">Tags: ${termsText}</div>
+              ${destinationHTML}
+            `;
+
+            // Add close button handler
+            const closeBtn = hoverCard.querySelector('.hover-card-close');
+            if (closeBtn) {
+              closeBtn.onmouseenter = () => {
+                closeBtn.style.background = 'rgba(255,102,0,0.8)';
+              };
+              closeBtn.onmouseleave = () => {
+                closeBtn.style.background = 'rgba(255,255,255,0.2)';
+              };
+              closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (hoverCard) {
+                  hoverCard.remove();
+                  hoverCard = null;
+                }
+                if (hideTimeout) {
+                  clearTimeout(hideTimeout);
+                  hideTimeout = null;
+                }
+              };
+            }
+
+            // Add click handler for destination thumbnail
+            if (linkedPhotoIndex !== -1) {
+              const destDiv = hoverCard.querySelector('.hover-destination');
+              if (destDiv) {
+                destDiv.onmouseenter = () => {
+                  destDiv.style.opacity = '0.8';
+                  const img = destDiv.querySelector('img');
+                  if (img) img.style.borderColor = '#ff6600';
+                };
+                destDiv.onmouseleave = () => {
+                  destDiv.style.opacity = '1';
+                  const img = destDiv.querySelector('img');
+                  if (img) img.style.borderColor = 'transparent';
+                };
+                destDiv.onclick = () => {
+                  selectPhoto(linkedPhotoIndex);
+                  if (hoverCard) {
+                    hoverCard.remove();
+                    hoverCard = null;
+                  }
+                };
+              }
+            }
+
+            // Keep hover card visible when mouse is over it
+            hoverCard.onmouseenter = () => {
+              if (hideTimeout) {
+                clearTimeout(hideTimeout);
+                hideTimeout = null;
+              }
+            };
+
+            hoverCard.onmouseleave = () => {
+              hideHoverCard();
+            };
+
+            document.body.appendChild(hoverCard);
+          };
+
+          const hideHoverCard = () => {
+            hideTimeout = setTimeout(() => {
+              if (hoverCard) {
+                hoverCard.remove();
+                hoverCard = null;
+              }
+            }, 300); // Longer delay to allow clicking thumbnail
+          };
+
+          dot.onmouseenter = showHoverCard;
+          dot.onmouseleave = hideHoverCard;
+
+          dot.onclick = (e) => {
+            e.stopPropagation();
+            console.log('🎯 Waypoint clicked:', wp.title || wp.name, 'on photo:', ph.title);
+            showWaypointOverlayWithLinks(wp, ph, e);
+          };
+        })(waypoint, photo);
+
+        // Append to body instead of card - UNTRAPPED!
+        document.body.appendChild(dot);
+      });
+    }
+
+    function navigateToLinkedPhoto(linkedPhotoId) {
+      /**
+       * Navigate to a different photo via waypoint link (SPATIAL update)
+       */
+      const linkedId = (linkedPhotoId || '').trim();
+      const photoIndex = allPhotos.findIndex(p => p.id === linkedId || p.filename === linkedId);
+      if (photoIndex === -1) {
+        console.warn(`Linked photo not found: ${linkedId}`);
+        return;
+      }
+
+      console.log(`📸 Navigating to linked photo: ${linkedId}`);
+      selectPhoto(photoIndex);
+    }
+
+    function showWaypointOverlayWithLinks(waypoint, currentPhoto, event) {
+      /**
+       * Show circling thumbnails around the waypoint dot
+       * Shows DESTINATION photo info and adds dynamic waypoints based on matching infoTerms
+       */
+      console.log('🎯 Waypoint clicked:', waypoint);
+
+      // If there's a linked photo, show it with dynamic waypoints
+      if (waypoint.linkedPhotoId) {
+        showCirclingThumbnailsWithDynamic(waypoint, event);
+      } else {
+        // No linked photo - find related photos by infoTerms and show them as dynamic waypoints
+        showDynamicWaypointsOnly(waypoint, currentPhoto, event);
+      }
+    }
+
+    function showCirclingThumbnailsWithDynamic(waypoint, clickEvent) {
+      /**
+       * Create enhanced thumbnail card with DESTINATION photo info + dynamic waypoints
+       */
+      const linkedId = (waypoint.linkedPhotoId || '').trim();
+      const linkedPhotoIndex = allPhotos.findIndex(p => p.id === linkedId || p.filename === linkedId);
+      if (linkedPhotoIndex === -1) {
+        console.warn(`Linked photo not found: ${linkedId}`);
+        return;
+      }
+
+      const linkedPhoto = allPhotos[linkedPhotoIndex];
+
+      // Find related photos using waypoint's infoTerms
+      const waypointTerms = waypoint.infoTerms || [];
+      const dynamicPhotos = [];
+      if (waypointTerms.length > 0) {
+        allPhotos.forEach((photo, idx) => {
+          if (idx !== linkedPhotoIndex) {
+            const photoTerms = getPhotoTerms(photo);
+            const matches = photoTerms.filter(t => waypointTerms.includes(t)).length;
+            if (matches > 0) {
+              dynamicPhotos.push({ idx, photo, matches });
+            }
+          }
+        });
+        dynamicPhotos.sort((a, b) => b.matches - a.matches);
+      }
+
+      showCirclingThumbnails(waypoint, clickEvent, linkedPhoto, linkedPhotoIndex, dynamicPhotos);
+    }
+
+    function showDynamicWaypointsOnly(waypoint, currentPhoto, clickEvent) {
+      /**
+       * Show only dynamic waypoints when no linkedPhotoId exists
+       */
+      const waypointTerms = waypoint.infoTerms || [];
+      if (waypointTerms.length === 0) {
+        // No terms to match - show basic waypoint info
+        showWaypointInfoOnly(waypoint, currentPhoto);
+        return;
+      }
+
+      // Find related photos
+      const dynamicPhotos = [];
+      allPhotos.forEach((photo, idx) => {
+        const photoTerms = getPhotoTerms(photo);
+        const matches = photoTerms.filter(t => waypointTerms.includes(t)).length;
+        if (matches > 0) {
+          dynamicPhotos.push({ idx, photo, matches });
+        }
+      });
+      dynamicPhotos.sort((a, b) => b.matches - a.matches);
+
+      if (dynamicPhotos.length === 0) {
+        showWaypointInfoOnly(waypoint, currentPhoto);
+        return;
+      }
+
+      // Show dynamic waypoints circling around click position
+      showDynamicCirclingPhotos(waypoint, clickEvent, dynamicPhotos);
+    }
+
+    function showCirclingThumbnails(waypoint, clickEvent, linkedPhoto, linkedPhotoIndex, dynamicPhotos = []) {
+      /**
+       * Create enhanced thumbnail card with summary around the waypoint dot position
+       */
+
+      // Get click position (waypoint dot position)
+      const dotX = clickEvent.clientX;
+      const dotY = clickEvent.clientY;
+
+      // Create or get preview container
+      let previewsContainer = document.getElementById('waypointPreviews');
+      if (!previewsContainer) {
+        previewsContainer = document.createElement('div');
+        previewsContainer.id = 'waypointPreviews';
+        previewsContainer.className = 'waypoint-previews';
+        document.body.appendChild(previewsContainer);
+      }
+
+      // Clear previous previews
+      previewsContainer.innerHTML = '';
+      previewsContainer.classList.remove('active');
+
+      // Create enhanced preview card with thumbnail and info
+      const preview = document.createElement('div');
+      preview.className = 'waypoint-preview waypoint-preview-enhanced';
+      preview.style.cssText = `
+        position: absolute;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        border: 3px solid #ff6600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        opacity: 0;
+        transform: scale(0);
+        animation: waypointPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        width: 280px;
+        max-width: 90vw;
+      `;
+
+      // Position near the waypoint dot
+      const radius = 120;
+      const offsetX = radius;
+      const offsetY = -60;
+
+      preview.style.left = (dotX + offsetX) + 'px';
+      preview.style.top = (dotY + offsetY) + 'px';
+
+      // Build the card content with image and summary
+      const photoNotes = linkedPhoto.notes || linkedPhoto.back_of_pic || 'Click to travel to this location';
+      const photoLocation = linkedPhoto.location || 'Unknown location';
+      const photoDay = linkedPhoto.day || '?';
+
+      preview.innerHTML = `
+        <div style="position: relative; width: 100%; padding-bottom: 75%; background: #f0f0f0;">
+          <img src="${linkedPhoto.cloudUrl || linkedPhoto.localPath || linkedPhoto.filename}"
+               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;"
+               alt="${linkedPhoto.title}">
+        </div>
+        <div style="padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+          <div style="font-weight: 600; font-size: 14px; color: white; margin-bottom: 4px;">
+            ${linkedPhoto.emoji || '📸'} ${linkedPhoto.title}
+          </div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.9); margin-bottom: 6px;">
+            📍 ${photoLocation} • Day ${photoDay}
+          </div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.95); line-height: 1.4; max-height: 40px; overflow: hidden;">
+            ${photoNotes.substring(0, 80)}${photoNotes.length > 80 ? '...' : ''}
+          </div>
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); font-size: 11px; color: white; font-weight: 600; text-align: center;">
+            ✨ Click to travel here ✨
+          </div>
+        </div>
+      `;
+
+      // Click to navigate and CENTER the photo
+      preview.onclick = (e) => {
+        e.stopPropagation();
+        console.log(`📸 Navigating to photo index: ${linkedPhotoIndex}`);
+        previewsContainer.classList.remove('active');
+        selectPhoto(linkedPhotoIndex);
+      };
+
+      // Hover effect
+      preview.addEventListener('mouseenter', () => {
+        preview.style.transform = 'scale(1.05)';
+        preview.style.borderColor = '#ff8833';
+        preview.style.boxShadow = '0 12px 48px rgba(255, 102, 0, 0.5)';
+      });
+
+      preview.addEventListener('mouseleave', () => {
+        preview.style.transform = 'scale(1)';
+        preview.style.borderColor = '#ff6600';
+        preview.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.3)';
+      });
+
+      previewsContainer.appendChild(preview);
+
+      // Add dynamic waypoint dots around the main preview (up to 6)
+      const dynamicToShow = dynamicPhotos.slice(0, 6);
+      dynamicToShow.forEach((item, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'waypoint-preview waypoint-preview-dynamic';
+        dot.style.cssText = `
+          position: absolute;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: ${item.photo.cloudUrl || item.photo.localPath ? `url("${item.photo.cloudUrl || item.photo.localPath}")` : '#667eea'};
+          background-size: cover;
+          background-position: center;
+          border: 3px solid white;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          cursor: pointer;
+          transition: all 0.3s ease;
+          opacity: 0;
+          animation: waypointPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          animation-delay: ${0.1 + i * 0.05}s;
+        `;
+
+        // Position in circular pattern around main preview
+        const angle = (i / dynamicToShow.length) * Math.PI * 2;
+        const circleRadius = 80;
+        const offsetX = Math.cos(angle) * circleRadius;
+        const offsetY = Math.sin(angle) * circleRadius;
+
+        dot.style.left = (dotX + offsetX) + 'px';
+        dot.style.top = (dotY + offsetY) + 'px';
+        dot.style.transform = 'translate(-50%, -50%)';
+
+        // Tooltip
+        dot.title = item.photo.title || 'Related photo';
+
+        // Click to navigate
+        dot.onclick = (e) => {
+          e.stopPropagation();
+          previewsContainer.classList.remove('active');
+          selectPhoto(item.idx);
+        };
+
+        // Hover effect
+        dot.addEventListener('mouseenter', () => {
+          dot.style.width = '50px';
+          dot.style.height = '50px';
+          dot.style.boxShadow = '0 6px 20px rgba(255, 102, 0, 0.6)';
+        });
+
+        dot.addEventListener('mouseleave', () => {
+          dot.style.width = '40px';
+          dot.style.height = '40px';
+          dot.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+        });
+
+        previewsContainer.appendChild(dot);
+      });
+
+      // Activate with animation
+      setTimeout(() => previewsContainer.classList.add('active'), 10);
+
+      // Close on click outside
+      setTimeout(() => {
+        document.addEventListener('click', function closeCircling(e) {
+          if (!previewsContainer.contains(e.target)) {
+            previewsContainer.classList.remove('active');
+            document.removeEventListener('click', closeCircling);
+          }
+        });
+      }, 100);
+    }
+
+    function showDynamicCirclingPhotos(waypoint, clickEvent, dynamicPhotos) {
+      /**
+       * Show only dynamic waypoint dots (no main card) when waypoint has no linkedPhotoId
+       */
+      const dotX = clickEvent.clientX;
+      const dotY = clickEvent.clientY;
+
+      // Create or get preview container
+      let previewsContainer = document.getElementById('waypointPreviews');
+      if (!previewsContainer) {
+        previewsContainer = document.createElement('div');
+        previewsContainer.id = 'waypointPreviews';
+        previewsContainer.className = 'waypoint-previews';
+        document.body.appendChild(previewsContainer);
+      }
+
+      // Clear previous previews
+      previewsContainer.innerHTML = '';
+      previewsContainer.classList.remove('active');
+
+      // Show up to 8 dynamic waypoints
+      const dynamicToShow = dynamicPhotos.slice(0, 8);
+      dynamicToShow.forEach((item, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'waypoint-preview waypoint-preview-dynamic';
+        dot.style.cssText = `
+          position: absolute;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          background: ${item.photo.cloudUrl || item.photo.localPath ? `url("${item.photo.cloudUrl || item.photo.localPath}")` : '#667eea'};
+          background-size: cover;
+          background-position: center;
+          border: 3px solid white;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          cursor: pointer;
+          transition: all 0.3s ease;
+          opacity: 0;
+          animation: waypointPopIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          animation-delay: ${i * 0.05}s;
+        `;
+
+        // Position in circular pattern
+        const angle = (i / dynamicToShow.length) * Math.PI * 2;
+        const circleRadius = 100;
+        const offsetX = Math.cos(angle) * circleRadius;
+        const offsetY = Math.sin(angle) * circleRadius;
+
+        dot.style.left = (dotX + offsetX) + 'px';
+        dot.style.top = (dotY + offsetY) + 'px';
+        dot.style.transform = 'translate(-50%, -50%)';
+
+        // Tooltip
+        dot.title = item.photo.title || 'Related photo';
+
+        // Click to navigate
+        dot.onclick = (e) => {
+          e.stopPropagation();
+          previewsContainer.classList.remove('active');
+          selectPhoto(item.idx);
+        };
+
+        // Hover effect
+        dot.addEventListener('mouseenter', () => {
+          dot.style.width = '60px';
+          dot.style.height = '60px';
+          dot.style.boxShadow = '0 6px 20px rgba(255, 102, 0, 0.6)';
+          dot.style.borderColor = '#ff6600';
+        });
+
+        dot.addEventListener('mouseleave', () => {
+          dot.style.width = '50px';
+          dot.style.height = '50px';
+          dot.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
+          dot.style.borderColor = 'white';
+        });
+
+        previewsContainer.appendChild(dot);
+      });
+
+      // Activate with animation
+      setTimeout(() => previewsContainer.classList.add('active'), 10);
+
+      // Close on click outside
+      setTimeout(() => {
+        document.addEventListener('click', function closeCircling(e) {
+          if (!previewsContainer.contains(e.target)) {
+            previewsContainer.classList.remove('active');
+            document.removeEventListener('click', closeCircling);
+          }
+        });
+      }, 100);
+    }
+
+    function showWaypointInfoOnly(waypoint, currentPhoto) {
+      /**
+       * Show simple tooltip with waypoint info (no link, no overlay modal)
+       * Just displays title and info terms near the waypoint
+       */
+      console.log('ℹ️ Showing waypoint info (no link):', waypoint.title || waypoint.name);
+
+      // Create a simple info bubble near the cursor
+      let infoBubble = document.getElementById('waypointInfoBubble');
+      if (!infoBubble) {
+        infoBubble = document.createElement('div');
+        infoBubble.id = 'waypointInfoBubble';
+        infoBubble.style.cssText = `
+          position: fixed;
+          background: rgba(0, 0, 0, 0.9);
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          z-index: 10000;
+          max-width: 300px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+          pointer-events: none;
+        `;
+        document.body.appendChild(infoBubble);
+      }
+
+      const title = waypoint.emoji
+        ? `${waypoint.emoji} ${waypoint.title || waypoint.name || 'Waypoint'}`
+        : waypoint.title || waypoint.name || 'Waypoint';
+
+      const termsText = waypoint.infoTerms && waypoint.infoTerms.length > 0
+        ? waypoint.infoTerms.join(', ')
+        : 'No tags';
+
+      infoBubble.innerHTML = `
+        <div style="font-weight: 600; margin-bottom: 6px;">${title}</div>
+        <div style="font-size: 12px; color: #aaa;">Tags: ${termsText}</div>
+        <div style="font-size: 11px; color: #999; margin-top: 6px; font-style: italic;">No linked destination</div>
+      `;
+
+      // Position near mouse/center
+      infoBubble.style.left = '50%';
+      infoBubble.style.top = '50%';
+      infoBubble.style.transform = 'translate(-50%, -50%)';
+      infoBubble.style.display = 'block';
+
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        infoBubble.style.display = 'none';
+      }, 3000);
+
+      // Click anywhere to close
+      const closeHandler = () => {
+        infoBubble.style.display = 'none';
+        document.removeEventListener('click', closeHandler);
+      };
+      setTimeout(() => {
+        document.addEventListener('click', closeHandler);
+      }, 100);
+    }
+
+    function showWaypointInfo(waypoint, photo) {
+      // Show waypoint details in overlay with enhanced info
+      document.getElementById('overlayPhoto').src = photo.cloudUrl || photo.localPath || photo.filename;
+
+      // Enhanced title with emoji if available
+      const title = waypoint.emoji
+        ? `${waypoint.emoji} ${waypoint.title || waypoint.name || 'Waypoint'}`
+        : waypoint.title || waypoint.name || 'Waypoint';
+      document.getElementById('overlayTitle').textContent = title;
+
+      // Enhanced description with more context
+      let description = waypoint.description || waypoint.notes || 'No description';
+      if (waypoint.linkedPhotoId) {
+        description += `\n\n🔗 Links to: ${waypoint.linkedPhotoId}`;
+      }
+      document.getElementById('overlayDescription').textContent = description;
+
+      const termsHtml = waypoint.infoTerms && waypoint.infoTerms.length > 0
+        ? waypoint.infoTerms.map(t => `<span class="overlay-term">${t}</span>`).join('')
+        : '<span class="overlay-term">No terms</span>';
+      document.getElementById('overlayTerms').innerHTML = termsHtml;
+
+      // Find and show photos related to this waypoint's terms
+      showPhotosRelatedToWaypoint(waypoint);
+
+      document.getElementById('overlayModal').classList.add('active');
+    }
+
+    function showPhotosRelatedToWaypoint(waypoint, centerPhotoElement) {
+      // Get waypoint terms
+      const waypointTerms = waypoint.infoTerms || [];
+      if (waypointTerms.length === 0) return;
+
+      // Find photos that share terms with this waypoint
+      const relatedPhotos = allPhotos
+        .map((p, idx) => {
+          if (idx === centerPhotoIndex) return null;
+          const photoTerms = getPhotoTerms(p);
+          const shared = photoTerms.filter(t => waypointTerms.includes(t)).length;
+          return { idx, photo: p, shared };
+        })
+        .filter(item => item && item.shared > 0)
+        .sort((a, b) => b.shared - a.shared)
+        .slice(0, 6);
+
+      // Create pop-in carousel container
+      let previewsContainer = document.getElementById('waypointPreviews');
+      if (!previewsContainer) {
+        previewsContainer = document.createElement('div');
+        previewsContainer.id = 'waypointPreviews';
+        previewsContainer.className = 'waypoint-previews';
+        document.body.appendChild(previewsContainer);
+      }
+
+      // Clear previous previews
+      previewsContainer.innerHTML = '';
+      previewsContainer.classList.remove('active');
+
+      // Get center photo position for carousel positioning
+      const centerCard = document.querySelector('.photo-card.center');
+      if (!centerCard) return;
+
+      const centerRect = centerCard.getBoundingClientRect();
+      const centerX = centerRect.left + centerRect.width / 2;
+      const centerY = centerRect.top + centerRect.height / 2;
+
+      // Create preview items in a circular pattern around center
+      relatedPhotos.forEach((item, i) => {
+        const preview = document.createElement('div');
+        preview.className = 'waypoint-preview';
+        preview.style.backgroundImage = `url("${item.photo.cloudUrl || item.photo.localPath || item.photo.filename}")`;
+
+        // Position in circular pattern around center photo
+        const angle = (i / relatedPhotos.length) * Math.PI * 2;
+        const radius = 120;
+        const offsetX = Math.cos(angle) * radius;
+        const offsetY = Math.sin(angle) * radius;
+
+        preview.style.left = (centerX + offsetX) + 'px';
+        preview.style.top = (centerY + offsetY) + 'px';
+        preview.style.transform = 'translate(-50%, -50%)';
+
+        // Handle click - check if photo has linkedPhotoId (SPATIAL update)
+        preview.onclick = (e) => {
+          e.stopPropagation();
+          // Check if this is a waypoint-linked navigation
+          if (waypoint && waypoint.linkedPhotoId) {
+            navigateToLinkedPhoto(waypoint.linkedPhotoId);
+          } else {
+            selectPhoto(item.idx);
+          }
+          previewsContainer.classList.remove('active');
+        };
+
+        previewsContainer.appendChild(preview);
+      });
+
+      // Activate carousel with animation
+      setTimeout(() => previewsContainer.classList.add('active'), 10);
+    }
+
+    function selectPhoto(idx, fromPlayback = false) {
+      centerPhotoIndex = idx;
+
+      // Stop playback if this is a manual navigation
+      if (!fromPlayback && isPlaying) {
+        stopPlayback();
+      }
+
+      addToNavigationHistory(idx);
+      renderGallery();
+      updatePlaybackUI();
+      // showThumbnailPreviews removed - Related Photos section removed
+    }
+
+    // updateInfoPanel() removed - #infoPanel element no longer exists
+
+    // REMOVED: showThumbnailPreviews - Related Photos section removed per user request
+
+    function openOverlay(idx) {
+      const photo = allPhotos[idx];
+      const terms = getPhotoTerms(photo);
+
+      document.getElementById('overlayPhoto').src = photo.cloudUrl || photo.localPath || photo.filename;
+      document.getElementById('overlayTitle').textContent = photo.title;
+      document.getElementById('overlayDescription').textContent = photo.notes || 'No description available';
+
+      const termsHtml = terms.length > 0
+        ? terms.map(t => `<span class="overlay-term">${t}</span>`).join('')
+        : '<span class="overlay-term">No terms</span>';
+      document.getElementById('overlayTerms').innerHTML = termsHtml;
+
+      document.getElementById('overlayModal').classList.add('active');
+    }
+
+    function closeOverlay() {
+      document.getElementById('overlayModal').classList.remove('active');
+    }
+
+    // ===== NEW FEATURES =====
+
+    function applySearchFilter() {
+      if (!currentSearchFilter) {
+        filteredPhotoIndices = null;
+        renderGallery();
+        return;
+      }
+
+      const searchTerms = currentSearchFilter.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
+
+      filteredPhotoIndices = allPhotos
+        .map((photo, idx) => {
+          const photoTerms = getPhotoTerms(photo).map(t => t.toLowerCase());
+          const matches = searchTerms.filter(st => photoTerms.some(pt => pt.includes(st)));
+          return { idx, matchCount: matches.length };
+        })
+        .filter(item => item.matchCount > 0)
+        .sort((a, b) => b.matchCount - a.matchCount)
+        .map(item => item.idx);
+
+      renderGallery();
+    }
+
+    function addToNavigationHistory(photoIdx) {
+      const photo = allPhotos[photoIdx];
+      const exists = navigationHistory.some(h => h.idx === photoIdx);
+
+      if (!exists) {
+        navigationHistory.push({ idx: photoIdx, title: photo.title });
+        if (navigationHistory.length > 10) navigationHistory.shift();
+      }
+
+      updateBreadcrumbTrail();
+    }
+
+    function updateBreadcrumbTrail() {
+      if (navigationHistory.length === 0) {
+        document.getElementById('breadcrumbTrail').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('breadcrumbTrail').style.display = 'block';
+      const items = document.getElementById('breadcrumbItems');
+      // Create simple text with ">" separators
+      items.innerHTML = navigationHistory.map((h, i) => {
+        const isActive = h.idx === centerPhotoIndex;
+        const shortTitle = h.title.substring(0, 12) + (h.title.length > 12 ? '...' : '');
+        const separator = i < navigationHistory.length - 1 ? '<span class="breadcrumb-separator">></span>' : '';
+        return `<span class="breadcrumb-item ${isActive ? 'active' : ''}"
+                      onclick="selectPhoto(${h.idx})"
+                      title="${h.title}">${shortTitle}</span>${separator}`;
+      }).join('');
+    }
+
+    function showPhotoTooltip(photoIdx, event) {
+      const photo = allPhotos[photoIdx];
+      const terms = getPhotoTerms(photo);
+      const tooltip = document.getElementById('photoTooltip');
+
+      tooltip.innerHTML = `
+        <div class="tooltip-title">${photo.title}</div>
+        <div style="font-size: 0.8em; color: #ccc; margin-bottom: 0.5em;">
+          📍 ${photo.location || 'Unknown'} • Day ${photo.day}
+        </div>
+        <div class="tooltip-terms">
+          ${terms.slice(0, 6).map(t => `<span class="tooltip-term">${t}</span>`).join('')}
+        </div>
+      `;
+
+      tooltip.classList.add('active');
+      tooltip.style.left = (event.clientX + 10) + 'px';
+      tooltip.style.top = (event.clientY + 10) + 'px';
+    }
+
+    function hidePhotoTooltip() {
+      document.getElementById('photoTooltip').classList.remove('active');
+    }
+
+    function drawConnectionLines() {
+      const svg = document.getElementById('connectionLines');
+      svg.innerHTML = '';
+
+      const cards = document.querySelectorAll('.photo-card');
+      if (cards.length < 2) return;
+
+      const centerCard = document.querySelector('.photo-card.center');
+      if (!centerCard) return;
+
+      const centerRect = centerCard.getBoundingClientRect();
+      const centerX = centerRect.left + centerRect.width / 2;
+      const centerY = centerRect.top + centerRect.height / 2;
+
+      // Draw lines to nearby photos
+      cards.forEach((card, idx) => {
+        if (card.classList.contains('center')) return;
+
+        const rect = card.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height / 2;
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', centerX);
+        line.setAttribute('y1', centerY);
+        line.setAttribute('x2', x);
+        line.setAttribute('y2', y);
+
+        // Highlight lines for near photos
+        if (card.classList.contains('near')) {
+          line.classList.add('active');
+        }
+
+        svg.appendChild(line);
+      });
+    }
+
+    function drawPerspectiveLines() {
+      /**
+       * Draw lines connecting waypoints of the same perspective in photo order
+       */
+      const svg = document.getElementById('perspectiveLines');
+      if (!svg) return;
+
+      svg.innerHTML = '';
+
+      // Get all waypoint dots currently visible
+      const allDots = document.querySelectorAll('.waypoint-dot-overlay');
+      if (allDots.length === 0) return;
+
+      // Group waypoints by perspective
+      const waypointsByPerspective = {};
+
+      allDots.forEach(dot => {
+        const perspective = dot.dataset.perspective;
+        if (!perspective) return;
+
+        const photoId = dot.dataset.photoId;
+        const waypointIndex = parseInt(dot.dataset.waypointIndex);
+
+        // Find the photo and waypoint data
+        const photo = allPhotos.find(p => p.filename === photoId);
+        if (!photo || !photo['sub-points'] || !photo['sub-points'][waypointIndex]) return;
+
+        const waypoint = photo['sub-points'][waypointIndex];
+        const photoOrder = photo.order || 0;
+
+        if (!waypointsByPerspective[perspective]) {
+          waypointsByPerspective[perspective] = [];
+        }
+
+        // Get dot position
+        const dotRect = dot.getBoundingClientRect();
+
+        waypointsByPerspective[perspective].push({
+          x: dotRect.left + dotRect.width / 2,
+          y: dotRect.top + dotRect.height / 2,
+          photoOrder: photoOrder,
+          waypointIndex: waypointIndex,
+          photoId: photoId
+        });
+      });
+
+      // Draw lines for each perspective
+      Object.keys(waypointsByPerspective).forEach(perspectiveName => {
+        const waypoints = waypointsByPerspective[perspectiveName];
+
+        // Sort by photo order
+        waypoints.sort((a, b) => {
+          if (a.photoOrder !== b.photoOrder) {
+            return a.photoOrder - b.photoOrder;
+          }
+          // If same photo, sort by waypoint index
+          return a.waypointIndex - b.waypointIndex;
+        });
+
+        // Get perspective color
+        const perspective = perspectivesWithColors.find(p => p.name === perspectiveName);
+        const color = perspective ? perspective.color : '#ff6600';
+
+        // Determine opacity and thickness based on whether this perspective is active
+        const isActive = activePerspectiveFilter === perspectiveName;
+        const opacity = isActive ? 0.9 : 0.6;
+        const strokeWidth = isActive ? '2' : '1';
+
+        // Draw lines between consecutive waypoints
+        for (let i = 0; i < waypoints.length - 1; i++) {
+          const start = waypoints[i];
+          const end = waypoints[i + 1];
+
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', start.x);
+          line.setAttribute('y1', start.y);
+          line.setAttribute('x2', end.x);
+          line.setAttribute('y2', end.y);
+          line.setAttribute('stroke', color);
+          line.setAttribute('stroke-width', strokeWidth);
+          line.setAttribute('stroke-opacity', opacity);
+          line.setAttribute('data-perspective', perspectiveName);
+
+          svg.appendChild(line);
+        }
+      });
+
+      console.log(`📍 Drew perspective lines for ${Object.keys(waypointsByPerspective).length} perspectives`);
+    }
+
+    function highlightSemanticClusters() {
+      const cards = document.querySelectorAll('.photo-card');
+      cards.forEach(card => card.classList.remove('cluster-highlight'));
+
+      const centerTerms = getPhotoTerms(allPhotos[centerPhotoIndex]);
+      const threshold = 0.6;
+
+      cards.forEach((card, idx) => {
+        if (idx === centerPhotoIndex) return;
+        const commonality = commonalityMatrix[centerPhotoIndex][idx];
+        if (commonality >= threshold) {
+          card.classList.add('cluster-highlight');
+        }
+      });
+    }
+
+    // Close overlay on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeOverlay();
+      }
+    });
+
+    window.addEventListener('resize', renderGallery);
+    loadGalleryData();
+
+    // 🌌 WAYPOINT UNIVERSE IFRAME - Only activate on live URLs (not localhost)
+    (function () {
+      const currentUrl = window.location.href;
+      const isLocalhost = currentUrl.includes('localhost') || currentUrl.includes('127.0.0.1');
+
+      if (!isLocalhost) {
+        console.log('🌌 Live URL detected - connecting to Waypoint Universe');
+
+        // Create hidden iframe to waypoint universe
+        const iframe = document.createElement('iframe');
+        iframe.id = 'waypoint-universe-bridge';
+        iframe.src = 'https://be-origo.com/waypoint_universe/';
+        iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+
+        console.log('📡 Universe iframe created: https://be-origo.com/waypoint_universe/');
+
+        // Initialize waypoint universe integration when gallery loads
+        // This will auto-share waypoints via postMessage to the iframe
+        if (typeof WaypointUniverseIntegration !== 'undefined') {
+          // Wait for iframe to load, then initialize
+          iframe.onload = function () {
+            console.log('🌉 Waypoint Universe iframe loaded and ready');
+          };
+        }
+      } else {
+        console.log('🏠 Localhost detected - Waypoint Universe sharing disabled (use localhost:9847/waypoint-universe for local testing)');
+      }
+    })();
+  </script>
+</body>
+
+</html>
