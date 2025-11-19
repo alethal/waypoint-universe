@@ -1420,7 +1420,7 @@
 
     async function loadGalleryData() {
       try {
-        const response = await fetch('../accid_dropper.json');
+        const response = await fetch('../gallery-data.json');
         galleryData = await response.json();
         allPhotos = galleryData.photos || [];
 
