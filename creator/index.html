@@ -2943,6 +2943,7 @@
         const typeSelect = document.getElementById(`waypoint-${waypointIndex}-type`);
         const titleInput = document.getElementById(`waypoint-${waypointIndex}-title`);
         const infoTextarea = document.getElementById(`waypoint-${waypointIndex}-info`);
+        const perspectiveSelect = document.getElementById(`waypoint-${waypointIndex}-perspective`);
         const linkSelect = document.getElementById(`waypoint-${waypointIndex}-link`);
         const groupersInput = document.getElementById(`waypoint-${waypointIndex}-groupers`);
         const infoTermsInput = document.getElementById(`waypoint-${waypointIndex}-infoTerms`);
@@ -2974,6 +2975,24 @@
         if (infoTextarea) {
           waypoint.info = infoTextarea.value;
           console.log('✅ Updated waypoint info:', infoTextarea.value);
+        }
+
+        // Update perspective
+        if (perspectiveSelect) {
+          const selectedPerspective = perspectiveSelect.value;
+          if (selectedPerspective) {
+            const perspective = perspectives.find(p => p.name === selectedPerspective);
+            if (perspective) {
+              waypoint.perspective = perspective.name;
+              waypoint.perspectiveDesc = perspective.desc;
+              console.log('✅ Updated waypoint perspective:', perspective.name);
+            }
+          } else {
+            // Clear perspective if "No Perspective" selected
+            delete waypoint.perspective;
+            delete waypoint.perspectiveDesc;
+            console.log('✅ Cleared waypoint perspective');
+          }
         }
 
         // Update link
