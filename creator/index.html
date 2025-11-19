@@ -1811,6 +1811,12 @@
         <input id="waypoint-info-terms" class="waypoint-input"
           placeholder="Info Terms - e.g., history, architecture, crowds, food" style="margin-bottom:8px;">
 
+        <label style="display:none;">👁️ Perspective</label>
+        <select id="waypoint-perspective" class="waypoint-input" style="margin-bottom:8px;">
+          <option value="">👁️ No Perspective</option>
+          <!-- Populated dynamically from perspectives array -->
+        </select>
+
         <label style="display:none;">🔗 Link to Another Photo</label>
         <select id="waypoint-linked-photo" class="waypoint-input" style="margin-bottom:8px;">
           <option value="">🔗 Link to Another Photo - None</option>
@@ -4409,6 +4415,9 @@
         document.getElementById('waypoint-description').value = waypoint.description || '';
         document.getElementById('waypoint-info-terms').value = (waypoint.infoTerms || []).join(', ');
 
+        // Populate perspective dropdown
+        populatePerspectiveDropdown(waypoint.perspective || '');
+
         // Populate photo dropdown from gallery-data.json
         await populatePhotoDropdown(waypoint.linkedPhotoId || '');
 
@@ -4425,6 +4434,31 @@
 
         // Show modal
         document.getElementById('waypointModal').style.display = 'flex';
+      }
+
+      function populatePerspectiveDropdown(selectedPerspective = '') {
+        const dropdown = document.getElementById('waypoint-perspective');
+        if (!dropdown) return;
+
+        // Clear existing options
+        dropdown.innerHTML = '<option value="">👁️ No Perspective</option>';
+
+        // Add option for each perspective
+        perspectives.forEach(p => {
+          const option = document.createElement('option');
+          option.value = p.name;
+          option.textContent = `${p.name}`;
+          option.style.color = p.color;
+
+          // Select if this is the current perspective
+          if (p.name === selectedPerspective) {
+            option.selected = true;
+          }
+
+          dropdown.appendChild(option);
+        });
+
+        console.log(`👁️ Loaded ${perspectives.length} perspectives into dropdown, selected: ${selectedPerspective}`);
       }
 
       async function populatePhotoDropdown(selectedFilename = '') {
@@ -4502,6 +4536,24 @@
         waypoint.description = document.getElementById('waypoint-description').value.trim();
         const termsStr = document.getElementById('waypoint-info-terms').value.trim();
         waypoint.infoTerms = termsStr ? termsStr.split(',').map(t => t.trim()).filter(Boolean) : [];
+
+        // Save perspective
+        if (document.getElementById('waypoint-perspective')) {
+          const selectedPerspective = document.getElementById('waypoint-perspective').value;
+          if (selectedPerspective) {
+            const perspective = perspectives.find(p => p.name === selectedPerspective);
+            if (perspective) {
+              waypoint.perspective = perspective.name;
+              waypoint.perspectiveDesc = perspective.desc;
+              console.log(`💾 Saved perspective to waypoint: ${perspective.name}`);
+            }
+          } else {
+            // Clear perspective if "No Perspective" selected
+            delete waypoint.perspective;
+            delete waypoint.perspectiveDesc;
+            console.log(`💾 Cleared perspective from waypoint`);
+          }
+        }
 
         // NEW: Save linkedPhotoId, emoji, opacity
         if (document.getElementById('waypoint-linked-photo')) {
