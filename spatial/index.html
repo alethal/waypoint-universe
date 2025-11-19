@@ -2919,6 +2919,14 @@
       const svg = document.getElementById('connectionLines');
       svg.innerHTML = '';
 
+      // Only draw base connection lines if there are NO perspectives
+      // If perspectives exist, we show perspective lines instead
+      const hasPerspectives = perspectivesWithColors && perspectivesWithColors.length > 0;
+      if (hasPerspectives) {
+        console.log('📍 Skipping base connection lines - perspectives exist');
+        return;
+      }
+
       const cards = document.querySelectorAll('.photo-card');
       if (cards.length < 2) return;
 
