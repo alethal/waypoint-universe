@@ -4,7 +4,18 @@
 async function exportStandaloneGallery() {
     try {
         // 1. Get current gallery data
-        const currentData = await loadData();
+        let currentData;
+        if (typeof loadGalleryData !== 'undefined') {
+            currentData = await loadGalleryData();
+        } else if (typeof loadData !== 'undefined') {
+            currentData = await loadData();
+        } else if (typeof galleryData !== 'undefined') {
+            currentData = galleryData;
+        } else if (typeof window.GALLERY_DATA !== 'undefined') {
+            currentData = window.GALLERY_DATA;
+        } else {
+            throw new Error('No gallery data available. Please load gallery data first.');
+        }
 
         // 2. Get current palette
         const currentPalette = extractCurrentPalette();
@@ -12,13 +23,19 @@ async function exportStandaloneGallery() {
         // 3. Create all three template versions with embedded GalleryUtils
         const templates = await createAllTemplateVersions(currentData, currentPalette);
 
-        // 4. Create complete package
-        await downloadCompleteGalleryPackage(templates, currentData.trip?.title || 'gallery');
+        // 4. Create complete package - get project name from various possible locations
+        const projectName = currentData?.trip?.title ||
+                           currentData?.metadata?.title ||
+                           currentData?.metadata?.gallery_id ||
+                           currentData?.project_name ||
+                           'gallery';
+        await downloadCompleteGalleryPackage(templates, projectName);
 
         showNotification('Complete gallery package exported! Includes mystery, timeline, and grid templates.');
 
     } catch (error) {
         showNotification('Export failed: ' + error.message, 'error');
+        console.error('Export error:', error);
     }
 }
 
@@ -62,6 +79,7 @@ if (typeof loadGalleryData !== 'undefined') {
         templates[currentTemplate] = document.documentElement.outerHTML;
 
         const templatePaths = {
+            'spatial': '/spatial/',
             'grid': '/grid/',
             'mystery': '/mystery/',
             'timeline': '/timeline/'
@@ -119,8 +137,10 @@ async function getGalleryUtilsCode() {
 
 function getBasicGalleryUtils() {
     return `
-// GALLERY UTILS - Basic version
+// GALLERY UTILS - Basic version with Universe integration
 const GalleryUtils = {
+    universeWindow: null,
+
     saveGalleryData() {
         const blob = new Blob([JSON.stringify(galleryData, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
@@ -145,10 +165,122 @@ const GalleryUtils = {
         setTimeout(() => div.remove(), 4000);
     },
 
+    openWaypointUniverse() {
+        // Try to open the Waypoint Universe in a popup
+        const universeUrl = prompt(
+            'Enter the URL of your Waypoint Universe:\\n(e.g., https://yoursite.com/waypoint-universe/ or file:///path/to/index.html)',
+            'https://alethal.github.io/waypoint-universe/'
+        );
+
+        if (!universeUrl) return;
+
+        // Open in popup window
+        const width = 1000;
+        const height = 800;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+
+        this.universeWindow = window.open(
+            universeUrl,
+            'WaypointUniverse',
+            \`width=\${width},height=\${height},left=\${left},top=\${top},resizable=yes,scrollbars=yes\`
+        );
+
+        if (this.universeWindow) {
+            this.showNotification('Waypoint Universe opened! Click "Share to Universe" when ready.');
+        } else {
+            this.showNotification('Popup blocked. Please allow popups and try again.', 'error');
+        }
+    },
+
+    shareToUniverse() {
+        // Try to find universe window (popup or parent iframe)
+        let targetWindow = this.universeWindow;
+
+        if (!targetWindow || targetWindow.closed) {
+            // If no popup, try to share to parent (if in iframe)
+            if (window.parent !== window) {
+                targetWindow = window.parent;
+            } else {
+                this.showNotification('Please open Waypoint Universe first!', 'error');
+                this.openWaypointUniverse();
+                return;
+            }
+        }
+
+        // Prepare gallery data for sharing
+        const projectId = galleryData.project_name || galleryData.trip?.title || 'Unnamed Gallery';
+
+        // Send waypoint data to universe
+        const message = {
+            type: 'share',
+            projectId: projectId,
+            galleryData: galleryData
+        };
+
+        targetWindow.postMessage(message, '*');
+
+        // Count waypoints being shared
+        let waypointCount = 0;
+        if (galleryData.photos) {
+            galleryData.photos.forEach(photo => {
+                if (photo['sub-points']) {
+                    waypointCount += photo['sub-points'].length;
+                }
+            });
+        }
+
+        this.showNotification(\`Shared \${waypointCount} waypoints to Universe! 🌌\`);
+        console.log('🌌 Shared to Waypoint Universe:', message);
+    },
+
     init() {
         const params = new URLSearchParams(location.search);
         if (params.get('edit')) {
             this.enableEditMode();
+        }
+
+        // Always add universe buttons
+        this.addUniverseButtons();
+
+        // Listen for acknowledgments from universe
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'universe-ack') {
+                console.log('✅ Universe acknowledgment received:', event.data);
+                this.showNotification(\`Universe received waypoints! Total: \${event.data.waypointsReceived}\`);
+            }
+        });
+    },
+
+    addUniverseButtons() {
+        // Add Share to Universe button
+        if (!document.getElementById('share-universe')) {
+            const shareBtn = document.createElement('button');
+            shareBtn.id = 'share-universe';
+            shareBtn.textContent = '🌌 Share to Universe';
+            shareBtn.style.cssText = \`
+                position: fixed; top: 20px; right: 20px; z-index: 1000;
+                padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white; border: none; border-radius: 6px; font-weight: 600;
+                cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            \`;
+            shareBtn.onclick = () => this.shareToUniverse();
+            document.body.appendChild(shareBtn);
+        }
+
+        // Add Open Universe button
+        if (!document.getElementById('open-universe')) {
+            const openBtn = document.createElement('button');
+            openBtn.id = 'open-universe';
+            openBtn.textContent = '🌐 Open Universe';
+            openBtn.style.cssText = \`
+                position: fixed; top: 20px; right: 200px; z-index: 1000;
+                padding: 8px 16px; background: #6c757d; color: white; border: none;
+                border-radius: 6px; font-weight: 600; cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            \`;
+            openBtn.onclick = () => this.openWaypointUniverse();
+            document.body.appendChild(openBtn);
         }
     },
 
@@ -158,7 +290,7 @@ const GalleryUtils = {
             saveBtn.id = 'standalone-save';
             saveBtn.textContent = '💾 Save Changes';
             saveBtn.style.cssText = \`
-                position: fixed; top: 20px; left: 20px; z-index: 1000;
+                position: fixed; top: 70px; right: 20px; z-index: 1000;
                 padding: 8px 16px; background: #28a745; color: white; border: none;
                 border-radius: 6px; font-weight: 600; cursor: pointer;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.2);
@@ -216,23 +348,39 @@ function processTemplateForStandalone(html, dataScript, templateType, palette) {
 
 function detectCurrentTemplate() {
     const path = window.location.pathname;
+    if (path.includes('/spatial')) return 'spatial';
     if (path.includes('/mystery')) return 'mystery';
     if (path.includes('/timeline')) return 'timeline';
     if (path.includes('/grid')) return 'grid';
-    return 'grid'; // default
+    return 'spatial'; // default to spatial for waypoint galleries
 }
 
 async function downloadCompleteGalleryPackage(templates, projectName) {
     // Create index.html with template selector
     const indexHTML = createGalleryIndex(projectName);
 
+    // Get gallery data for JSON export
+    let galleryDataForExport;
+    if (typeof loadGalleryData !== 'undefined') {
+        galleryDataForExport = await loadGalleryData();
+    } else if (typeof loadData !== 'undefined') {
+        galleryDataForExport = await loadData();
+    } else if (typeof galleryData !== 'undefined') {
+        galleryDataForExport = galleryData;
+    } else if (typeof window.GALLERY_DATA !== 'undefined') {
+        galleryDataForExport = window.GALLERY_DATA;
+    } else {
+        galleryDataForExport = { photos: [] };
+    }
+
     // Create files object for zip
     const files = {
         'index.html': indexHTML,
+        'spatial.html': templates.spatial || createTemplatePlaceholder('spatial'),
         'grid.html': templates.grid || createTemplatePlaceholder('grid'),
         'mystery.html': templates.mystery || createTemplatePlaceholder('mystery'),
         'timeline.html': templates.timeline || createTemplatePlaceholder('timeline'),
-        'gallery-data.json': JSON.stringify(await loadData(), null, 2),
+        'gallery-data.json': JSON.stringify(galleryDataForExport, null, 2),
         'README.md': createReadmeFile(projectName)
     };
 
@@ -280,6 +428,11 @@ function createGalleryIndex(projectName) {
         <p class="subtitle">Choose your viewing experience</p>
 
         <div class="templates">
+            <a href="spatial.html" class="template-card">
+                <div class="template-title">🌌 Spatial Gallery</div>
+                <div class="template-desc">3D perspective view with semantic waypoint clustering. Explore multiple perspectives with connection lines.</div>
+            </a>
+
             <a href="grid.html" class="template-card">
                 <div class="template-title">🗂️ Grid View</div>
                 <div class="template-desc">Grid layout with full editing capabilities. Best for organizing and managing photos.</div>
@@ -312,6 +465,7 @@ This is a complete, self-contained gallery that works offline without any server
 
 ## Files Included:
 - **index.html** - Gallery selector page
+- **spatial.html** - 3D spatial gallery with perspective-based waypoints
 - **grid.html** - Grid view with full editing capabilities
 - **mystery.html** - Interactive mystery dots experience
 - **timeline.html** - Chronological timeline view
@@ -326,9 +480,30 @@ This is a complete, self-contained gallery that works offline without any server
 5. Refresh to see changes
 
 ## Editing Features:
+- **Spatial**: 3D perspective view with waypoint editing, perspective management, connection visualization
 - **Grid**: Full drag-drop reordering, metadata editing, photo management
 - **Mystery**: View-focused with basic editing capabilities
 - **Timeline**: Chronological editing and date management
+
+## Waypoint Universe Integration:
+Share your waypoints to the Waypoint Universe hub to connect with other galleries!
+
+### How to Share Waypoints:
+1. Click **"🌐 Open Universe"** button in the top right
+2. Enter your Waypoint Universe URL (or use the default)
+3. Click **"🌌 Share to Universe"** to send your waypoints
+4. The Universe will acknowledge receipt and display your waypoints
+
+### Features:
+- **Automatic Detection**: If your gallery is in an iframe with the Universe, sharing happens automatically
+- **Popup Mode**: Open Universe in a popup window for side-by-side viewing
+- **Visual Feedback**: Get notifications when waypoints are successfully shared
+- **Two-way Communication**: Universe sends acknowledgment when waypoints are received
+
+### Default Universe URL:
+https://alethal.github.io/waypoint-universe/
+
+You can host your own Waypoint Universe or use the default shared hub!
 
 ## Offline Capability:
 This gallery works completely offline. No internet connection required after download.
@@ -413,7 +588,135 @@ function addStandaloneExportButton() {
     exportBtn.onclick = exportStandaloneGallery;
 }
 
-// Auto-add button when page loads
+// GalleryUtils for LIVE galleries (not just exported)
+const GalleryUtils = {
+    universeWindow: null,
+
+    saveGalleryData() {
+        if (typeof galleryData === 'undefined') {
+            this.showNotification('No gallery data to save', 'error');
+            return;
+        }
+        const blob = new Blob([JSON.stringify(galleryData, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'gallery-data.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showNotification('Gallery data saved!');
+    },
+
+    openWaypointUniverse() {
+        const universeUrl = prompt(
+            'Enter the URL of your Waypoint Universe:\n(e.g., https://yoursite.com/waypoint-universe/ or file:///path/to/index.html)',
+            'https://alethal.github.io/waypoint-universe/'
+        );
+
+        if (!universeUrl) return;
+
+        const width = 1000;
+        const height = 800;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+
+        this.universeWindow = window.open(
+            universeUrl,
+            'WaypointUniverse',
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+
+        if (this.universeWindow) {
+            showNotification('Waypoint Universe opened! Click "Share to Universe" when ready.');
+        } else {
+            showNotification('Could not open Universe. Please check pop-up blocker.', 'error');
+        }
+    },
+
+    shareToUniverse() {
+        let targetWindow = this.universeWindow;
+        if (!targetWindow || targetWindow.closed) {
+            if (window.parent !== window) {
+                targetWindow = window.parent;
+            } else {
+                showNotification('Please open Waypoint Universe first!', 'error');
+                this.openWaypointUniverse();
+                return;
+            }
+        }
+
+        if (typeof galleryData === 'undefined') {
+            showNotification('No gallery data to share', 'error');
+            return;
+        }
+
+        const projectId = galleryData.metadata?.title || galleryData.metadata?.gallery_id || 'Unnamed Gallery';
+        const message = {
+            type: 'share',
+            projectId: projectId,
+            galleryData: galleryData
+        };
+
+        targetWindow.postMessage(message, '*');
+
+        let waypointCount = 0;
+        if (galleryData.photos) {
+            galleryData.photos.forEach(photo => {
+                if (photo['sub-points']) {
+                    waypointCount += photo['sub-points'].length;
+                }
+            });
+        }
+        showNotification(`Shared ${waypointCount} waypoints to Universe! 🌌`);
+    },
+
+    addUniverseButtons() {
+        if (!document.getElementById('share-universe')) {
+            const shareBtn = document.createElement('button');
+            shareBtn.id = 'share-universe';
+            shareBtn.textContent = '🌌 Share to Universe';
+            shareBtn.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 1000;
+                padding: 8px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white; border: none; border-radius: 6px; font-weight: 600;
+                cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            `;
+            shareBtn.onclick = () => this.shareToUniverse();
+            document.body.appendChild(shareBtn);
+        }
+
+        if (!document.getElementById('open-universe')) {
+            const openBtn = document.createElement('button');
+            openBtn.id = 'open-universe';
+            openBtn.textContent = '🌐 Open Universe';
+            openBtn.style.cssText = `
+                position: fixed; top: 20px; right: 200px; z-index: 1000;
+                padding: 8px 16px; background: #6c757d; color: white; border: none;
+                border-radius: 6px; font-weight: 600; cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            `;
+            openBtn.onclick = () => this.openWaypointUniverse();
+            document.body.appendChild(openBtn);
+        }
+    },
+
+    init() {
+        this.addUniverseButtons();
+
+        // Listen for acknowledgments from universe
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'universe-ack') {
+                console.log('✅ Universe acknowledgment received:', event.data);
+                showNotification(`Universe received waypoints! Total: ${event.data.waypointsReceived}`);
+            }
+        });
+    }
+};
+
+// Auto-add buttons when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(addStandaloneExportButton, 1000); // Wait for page to settle
+    setTimeout(() => {
+        addStandaloneExportButton();
+        GalleryUtils.init();
+    }, 1000); // Wait for page to settle
 });
