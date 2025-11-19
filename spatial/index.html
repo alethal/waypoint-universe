@@ -1668,8 +1668,12 @@
 
       if (termsA.length === 0 || termsB.length === 0) return 0;
 
-      const shared = termsA.filter(t => termsB.includes(t)).length;
-      const unique = new Set([...termsA, ...termsB]).size;
+      // Convert to lowercase for case-insensitive comparison
+      const termsALower = termsA.map(t => t.toLowerCase());
+      const termsBLower = termsB.map(t => t.toLowerCase());
+
+      const shared = termsALower.filter(t => termsBLower.includes(t)).length;
+      const unique = new Set([...termsALower, ...termsBLower]).size;
 
       return shared / unique;
     }
