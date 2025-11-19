@@ -120,9 +120,7 @@
     /* Creator Bridge Panel */
     .creator-bridge {
       position: fixed;
-      top: 50%;
       right: 0;
-      transform: translateY(-50%);
       z-index: 900;
       background: rgba(0, 0, 0, 0.85);
       backdrop-filter: blur(10px);
@@ -133,6 +131,18 @@
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       max-height: 80vh;
       overflow-y: auto;
+    }
+
+    /* Layout Bridge - positioned higher */
+    #layoutBridge {
+      top: 25%;
+      transform: translateY(-50%);
+    }
+
+    /* Perspectives Bridge - positioned lower */
+    #perspectivesBridge {
+      top: 60%;
+      transform: translateY(-50%);
     }
 
     .creator-bridge.collapsed {
@@ -1532,14 +1542,14 @@
 
     <!-- Perspectives Setup Panel - REMOVED, now in Creator Bridge below -->
 
-    <!-- Creator Bridge Panel -->
-    <div class="creator-bridge collapsed" id="creatorBridge">
-      <div class="bridge-tab-toggle" id="creatorBridgeToggle">⚙️</div>
+    <!-- Layout Bridge Panel -->
+    <div class="creator-bridge collapsed" id="layoutBridge">
+      <div class="bridge-tab-toggle" id="layoutBridgeToggle">📐</div>
 
       <div class="bridge-content">
-        <button class="bridge-close" id="creatorBridgeClose">×</button>
+        <button class="bridge-close" id="layoutBridgeClose">×</button>
 
-        <!-- Section 1: Gallery Layout Style -->
+        <!-- Gallery Layout Style -->
         <div class="bridge-section">
           <h4>📐 Layout Style</h4>
 
@@ -1595,8 +1605,17 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Section 2: Perspectives -->
+    <!-- Perspectives Bridge Panel -->
+    <div class="creator-bridge collapsed" id="perspectivesBridge">
+      <div class="bridge-tab-toggle" id="perspectivesBridgeToggle">👁️</div>
+
+      <div class="bridge-content">
+        <button class="bridge-close" id="perspectivesBridgeClose">×</button>
+
+        <!-- Perspectives -->
         <div class="bridge-section">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75em;">
             <h4 style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 0.3em;"
@@ -5461,29 +5480,52 @@
 
     // Initialize creator bridge toggle
     document.addEventListener('DOMContentLoaded', () => {
-      const creatorBridgeToggle = document.getElementById('creatorBridgeToggle');
-      const creatorBridge = document.getElementById('creatorBridge');
-      const creatorBridgeClose = document.getElementById('creatorBridgeClose');
+      // Layout Bridge Toggle
+      const layoutBridgeToggle = document.getElementById('layoutBridgeToggle');
+      const layoutBridge = document.getElementById('layoutBridge');
+      const layoutBridgeClose = document.getElementById('layoutBridgeClose');
 
-      if (creatorBridgeToggle && creatorBridge) {
-        // Click tab to toggle
-        creatorBridgeToggle.addEventListener('click', (e) => {
+      if (layoutBridgeToggle && layoutBridge) {
+        layoutBridgeToggle.addEventListener('click', (e) => {
           e.stopPropagation();
-          creatorBridge.classList.toggle('collapsed');
+          layoutBridge.classList.toggle('collapsed');
         });
 
-        // Click close button
-        if (creatorBridgeClose) {
-          creatorBridgeClose.addEventListener('click', (e) => {
+        if (layoutBridgeClose) {
+          layoutBridgeClose.addEventListener('click', (e) => {
             e.stopPropagation();
-            creatorBridge.classList.add('collapsed');
+            layoutBridge.classList.add('collapsed');
           });
         }
 
-        // Click collapsed bridge to expand
-        creatorBridge.addEventListener('click', (e) => {
-          if (creatorBridge.classList.contains('collapsed')) {
-            creatorBridge.classList.remove('collapsed');
+        layoutBridge.addEventListener('click', (e) => {
+          if (layoutBridge.classList.contains('collapsed')) {
+            layoutBridge.classList.remove('collapsed');
+          }
+        });
+      }
+
+      // Perspectives Bridge Toggle
+      const perspectivesBridgeToggle = document.getElementById('perspectivesBridgeToggle');
+      const perspectivesBridge = document.getElementById('perspectivesBridge');
+      const perspectivesBridgeClose = document.getElementById('perspectivesBridgeClose');
+
+      if (perspectivesBridgeToggle && perspectivesBridge) {
+        perspectivesBridgeToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          perspectivesBridge.classList.toggle('collapsed');
+        });
+
+        if (perspectivesBridgeClose) {
+          perspectivesBridgeClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            perspectivesBridge.classList.add('collapsed');
+          });
+        }
+
+        perspectivesBridge.addEventListener('click', (e) => {
+          if (perspectivesBridge.classList.contains('collapsed')) {
+            perspectivesBridge.classList.remove('collapsed');
           }
         });
       }
