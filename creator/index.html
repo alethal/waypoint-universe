@@ -20,52 +20,10 @@
     }
 
     /* Vertical Tabs (Right Side) - Always visible on creator page */
-    .preview-tabs {
-      position: fixed;
-      right: 0;
-      top: 140px;
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .preview-tab {
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
-      padding: 20px 12px;
-      background: #343a40;
-      color: white;
-      border: none;
-      border-left: 3px solid #0d6efd;
-      /* Blue edge to make it more visible */
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.3s ease;
-      border-radius: 8px 0 0 8px;
-      letter-spacing: 2px;
-      text-decoration: none;
-      display: block;
-      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
-      /* Shadow for depth */
-    }
-
-    .preview-tab:hover {
-      background: #495057;
-      padding-left: 16px;
-    }
-
-    .preview-tab.active {
-      background: #0d6efd;
-      padding-left: 16px;
-    }
-
-    /* Layout and Perspectives tabs - same style as preview */
     .settings-tabs {
       position: fixed;
       right: 0;
-      top: 220px;
+      top: 140px;
       z-index: 1000;
       display: flex;
       flex-direction: column;
@@ -1454,15 +1412,7 @@
     <!--a href="../creator?edit=1">✏️ Edit</a-->
   </div>
 
-  <!-- Vertical Navigation Tabs (collapsed, slide out on hover) -->
-  <div class="preview-tabs">
-    <button class="preview-tab" data-template="spatial">Spatial</button>
-    <!--
-  <button class="preview-tab" data-template="mystery">Mystery</button>
-  <button class="preview-tab" data-template="timeline">Timeline</button>
-  <button class="preview-tab" data-template="location">Location</button>
--->
-  </div>
+  <!-- Vertical Navigation Tabs - REMOVED, moved to settings-tabs above -->
   <!-- Preview Panel -->
   <div id="preview-panel"
     style="display: none; position: fixed; top: 75px; right: 0; width: 50vw; height: 100vh; background: white; box-shadow: -4px 0 12px rgba(0,0,0,0.3); z-index: 999;">
@@ -1580,14 +1530,15 @@
 
     <!-- Perspectives Setup Panel - REMOVED, now in Creator Bridge below -->
 
-    <!-- Settings Tabs (Layout & Perspectives) -->
+    <!-- Settings Tabs (Spatial, Layout & Perspectives) -->
     <div class="settings-tabs">
+      <button class="settings-tab" data-template="spatial">Spatial</button>
       <button class="settings-tab" data-panel="layout">📐 Layout Style</button>
       <button class="settings-tab" data-panel="perspectives">👁️ Perspectives</button>
     </div>
 
     <!-- Layout Panel -->
-    <div id="layout-panel" class="settings-panel" style="display: none; position: fixed; top: 0; right: 0; width: 320px; height: 100vh; background: rgba(0,0,0,0.9); box-shadow: -4px 0 12px rgba(0,0,0,0.3); z-index: 999; overflow-y: auto; padding: 20px;">
+    <div id="layout-panel" class="settings-panel" style="display: none; position: fixed; top: 70px; right: 0; width: 320px; height: calc(100vh - 70px); background: rgba(0,0,0,0.9); box-shadow: -4px 0 12px rgba(0,0,0,0.3); z-index: 999; overflow-y: auto; padding: 20px; padding-right: 70px;">
       <button class="panel-close" data-panel="layout" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); border: none; color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 18px;">×</button>
 
       <div class="bridge-section">
@@ -1648,7 +1599,7 @@
     </div>
 
     <!-- Perspectives Panel -->
-    <div id="perspectives-panel" class="settings-panel" style="display: none; position: fixed; top: 0; right: 0; width: 320px; height: 100vh; background: rgba(0,0,0,0.9); box-shadow: -4px 0 12px rgba(0,0,0,0.3); z-index: 999; overflow-y: auto; padding: 20px;">
+    <div id="perspectives-panel" class="settings-panel" style="display: none; position: fixed; top: 70px; right: 0; width: 320px; height: calc(100vh - 70px); background: rgba(0,0,0,0.9); box-shadow: -4px 0 12px rgba(0,0,0,0.3); z-index: 999; overflow-y: auto; padding: 20px; padding-right: 70px;">
       <button class="panel-close" data-panel="perspectives" style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.1); border: none; color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 18px;">×</button>
 
       <div class="bridge-section">
@@ -5000,38 +4951,13 @@
       document.addEventListener('DOMContentLoaded', () => {
         const previewPanel = document.getElementById('preview-panel');
         const previewIframe = document.getElementById('preview-iframe');
-        const previewTitle = document.getElementById('preview-title');
         const closePreviewBtn = document.getElementById('close-preview');
-        const previewTabs = document.querySelectorAll('.preview-tab');
-
-        // Handle tab clicks
-        previewTabs.forEach(tab => {
-          tab.addEventListener('click', () => {
-            const template = tab.getAttribute('data-template');
-            const templateUrl = `../${template}/`;
-
-            // Update iframe and title
-            previewIframe.src = templateUrl;
-            previewTitle.textContent = `${tab.textContent} Preview`;
-
-            // Close all settings panels
-            document.querySelectorAll('.settings-panel').forEach(p => p.style.display = 'none');
-            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-
-            // Show preview panel
-            previewPanel.style.display = 'block';
-
-            // Mark tab as active
-            previewTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-          });
-        });
 
         // Handle close button
         closePreviewBtn.addEventListener('click', () => {
           previewPanel.style.display = 'none';
           previewIframe.src = '';
-          previewTabs.forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
         });
 
         // Close preview with ESC key
@@ -5039,7 +4965,7 @@
           if (e.key === 'Escape' && previewPanel.style.display === 'block') {
             previewPanel.style.display = 'none';
             previewIframe.src = '';
-            previewTabs.forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
           }
         });
       });
@@ -5526,23 +5452,41 @@
       settingsTabs.forEach(tab => {
         tab.addEventListener('click', () => {
           const panelName = tab.dataset.panel;
-          const panel = document.getElementById(`${panelName}-panel`);
+          const templateName = tab.dataset.template;
 
-          // Close all panels
+          // Close all panels first
           settingsPanels.forEach(p => p.style.display = 'none');
           settingsTabs.forEach(t => t.classList.remove('active'));
 
-          // Close preview panel if open
-          const previewPanel = document.getElementById('preview-panel');
-          if (previewPanel) {
-            previewPanel.style.display = 'none';
-          }
-          document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+          // Handle preview template (Spatial)
+          if (templateName) {
+            const previewPanel = document.getElementById('preview-panel');
+            const previewIframe = document.getElementById('preview-iframe');
+            const previewTitle = document.getElementById('preview-title');
 
-          // Open clicked panel
-          if (panel) {
-            panel.style.display = 'block';
-            tab.classList.add('active');
+            if (previewPanel && previewIframe && previewTitle) {
+              const templateUrl = `../${templateName}/`;
+              previewIframe.src = templateUrl;
+              previewTitle.textContent = `${tab.textContent} Preview`;
+              previewPanel.style.display = 'block';
+              tab.classList.add('active');
+            }
+          }
+          // Handle settings panel (Layout, Perspectives)
+          else if (panelName) {
+            const panel = document.getElementById(`${panelName}-panel`);
+
+            // Close preview panel if open
+            const previewPanel = document.getElementById('preview-panel');
+            if (previewPanel) {
+              previewPanel.style.display = 'none';
+            }
+
+            // Open clicked panel
+            if (panel) {
+              panel.style.display = 'block';
+              tab.classList.add('active');
+            }
           }
         });
       });
